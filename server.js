@@ -3,17 +3,14 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname)));
+const ROOT = __dirname;
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'finance-app.html'));
+  res.sendFile(path.join(ROOT, 'finance-app.html'));
 });
 
-app.get('/finance', (req, res) => {
-  res.sendFile(path.join(__dirname, 'finance-app.html'));
-});
+app.use(express.static(ROOT));
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Finance App running on port ${PORT}`);
 });
