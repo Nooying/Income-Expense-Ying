@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Planning & Actual Tracking System</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes pulse-soft{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes slide-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes bounce-in{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Prompt',sans-serif;background:linear-gradient(135deg,#faf5ff 0%,#f0e6ff 50%,#fce7f3 100%);background-attachment:fixed;display:flex;height:100vh;overflow:hidden;font-size:14px}
+.sidebar{width:260px;background:linear-gradient(180deg,#4c1d95,#2e1065,#1a0533);color:#fff;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;box-shadow:4px 0 20px rgba(76,29,149,.3)}
+.sidebar-logo{padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,.1);text-align:center}
+.sidebar-logo h2{font-size:14px;font-weight:700;line-height:1.3;margin-top:4px}
+.sidebar-logo p{font-size:10px;opacity:.5;margin-top:2px}
+/* Daily cash flow */
+.daily-summary-row{background:linear-gradient(135deg,#f5f3ff,#ede9fe);font-weight:700}
+.daily-pos{color:#065f46;font-weight:700}
+.daily-neg{color:#991b1b;font-weight:700}
+.daily-bal{color:#4c1d95;font-weight:800;font-size:13px}
+.upload-zone{border:2.5px dashed #c084fc;border-radius:16px;padding:28px;text-align:center;cursor:pointer;background:rgba(245,240,255,.5);transition:all .2s}
+.upload-zone:hover{border-color:#9333ea;background:rgba(237,233,254,.7)}
+.btn-excel{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:50px;padding:8px 16px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:'Prompt',sans-serif;box-shadow:0 4px 12px rgba(22,163,74,.3);transition:all .2s}
+.btn-excel:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(22,163,74,.4)}
+.btn-import{background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;border-radius:50px;padding:8px 16px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:'Prompt',sans-serif;box-shadow:0 4px 12px rgba(14,165,233,.3);transition:all .2s}
+.btn-import:hover{transform:translateY(-2px)}
+.cat-chip{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:600;white-space:nowrap}
+.chip-rev{background:#d1fae5;color:#065f46}
+.chip-exp{background:#fee2e2;color:#991b1b}
+.day-header{background:linear-gradient(135deg,#ede9fe,#fae8ff);font-weight:700;color:#4c1d95}
+/* Mascot */
+.mascot-wrap{display:flex;justify-content:center;padding:12px 0 4px;animation:float 3s ease-in-out infinite}
+.mascot-speech{background:rgba(255,255,255,.12);border-radius:12px;padding:6px 10px;font-size:10px;text-align:center;margin:0 12px 8px;opacity:.8;line-height:1.4;border:1px solid rgba(255,255,255,.15)}
+.nav-section{padding:16px 16px 6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.4}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-radius:12px;margin:2px 8px;transition:all .25s;font-size:13px;font-weight:400}
+.nav-item:hover{background:rgba(255,255,255,.12);transform:translateX(3px)}
+.nav-item.active{background:linear-gradient(135deg,rgba(196,168,255,.35),rgba(244,114,182,.2));font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-icon{width:20px;text-align:center;font-size:15px;flex-shrink:0}
+.sidebar-footer{padding:16px;border-top:1px solid rgba(255,255,255,.1);margin-top:auto}
+.user-info{display:flex;align-items:center;gap:10px}
+.user-avatar{width:34px;height:34px;background:#c084fc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-role{font-size:11px;opacity:.6}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:rgba(255,255,255,.85);backdrop-filter:blur(12px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(168,85,247,.15);flex-shrink:0;box-shadow:0 2px 12px rgba(147,51,234,.06)}
+.topbar-left h1{font-size:18px;font-weight:700;color:#1e293b}
+.topbar-left p{font-size:12px;color:#64748b;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.btn{padding:8px 16px;border-radius:50px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;font-family:'Prompt',sans-serif}
+.btn-primary{background:linear-gradient(135deg,#9333ea,#7c3aed);color:#fff;box-shadow:0 4px 12px rgba(147,51,234,.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(147,51,234,.45)}
+.btn-secondary{background:rgba(243,232,255,.8);color:#7e22ce;border:1px solid rgba(168,85,247,.2)}
+.btn-secondary:hover{background:#ede9fe;transform:translateY(-1px)}
+.btn:hover{opacity:.85}
+.badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:600;letter-spacing:.2px}
+.badge-blue{background:#f3e8ff;color:#7e22ce}
+.badge-good{background:#d1fae5;color:#065f46}
+.badge-warn{background:#fef3c7;color:#92400e}
+.badge-bad{background:#fee2e2;color:#991b1b}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.page{display:none}
+.page.active{display:block}
+/* Summary cards */
+.summary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.summary-card{background:#fff;border-radius:18px;padding:18px 16px;border:1px solid rgba(168,85,247,.12);box-shadow:0 4px 16px rgba(147,51,234,.08);transition:all .25s;overflow:hidden;position:relative;animation:slide-in .4s ease both}
+.summary-card::before{content:'';position:absolute;top:-18px;right:-18px;width:64px;height:64px;border-radius:50%;background:currentColor;opacity:.06}
+.summary-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(147,51,234,.14)}
+.card-icon{font-size:20px;margin-bottom:8px}
+.card-label{font-size:11px;color:#64748b;font-weight:500}
+.card-value{font-size:19px;font-weight:700;color:#1e293b;margin-top:4px;line-height:1}
+.card-sub{font-size:11px;margin-top:5px}
+.text-green{color:#10b981}
+.text-red{color:#ef4444}
+.text-yellow{color:#f59e0b}
+.text-blue{color:#9333ea}
+/* Charts */
+.charts-row{display:grid;gap:16px;margin-bottom:20px}
+.charts-row-2{grid-template-columns:2fr 1fr}
+.charts-row-3{grid-template-columns:1fr 1fr 1fr}
+.chart-card{background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-radius:20px;padding:20px;border:1px solid rgba(168,85,247,.1);box-shadow:0 4px 16px rgba(147,51,234,.07);transition:box-shadow .2s}
+.chart-card:hover{box-shadow:0 8px 28px rgba(147,51,234,.12)}
+.chart-title{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.chart-title span{font-size:11px;color:#64748b;font-weight:400}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+/* kpi-card already defined above */
+.kpi-card-x{display:none}
+.kpi-value{font-size:26px;font-weight:700}
+.kpi-label{font-size:11px;color:#64748b;margin-top:3px}
+.kpi-bar{height:5px;background:#e5e7eb;border-radius:3px;margin-top:10px;overflow:hidden}
+.kpi-fill{height:100%;border-radius:3px}
+/* Table */
+.table-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:20px;border:1px solid rgba(168,85,247,.1);overflow:hidden;margin-bottom:20px;box-shadow:0 4px 16px rgba(147,51,234,.06)}
+.table-header{padding:14px 18px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.table-header h3{font-size:14px;font-weight:600;color:#1e293b}
+table{width:100%;border-collapse:collapse}
+th{background:#faf5ff;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#7e22ce;border-bottom:1px solid #ede9fe;white-space:nowrap}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#334155}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.var-pos{color:#10b981;font-weight:600}
+.var-neg{color:#ef4444;font-weight:600}
+label{font-size:12px;color:#64748b;white-space:nowrap}
+/* Bottom grid */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+/* Performer list */
+.performer-item{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f1f5f9}
+.performer-item:last-child{border-bottom:none}
+.rank{width:22px;height:22px;border-radius:50%;background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.p-name{flex:1;font-size:12px;font-weight:500;margin:0 10px;color:#1e293b}
+.p-val{font-size:12px;font-weight:700}
+/* Alerts */
+.alert-item{padding:11px 14px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:8px}
+.alert-red{background:#fef2f2;border-left:3px solid #ef4444;color:#7f1d1d}
+.alert-yellow{background:#fffbeb;border-left:3px solid #f59e0b;color:#78350f}
+.alert-green{background:#f0fdf4;border-left:3px solid #10b981;color:#14532d}
+/* Report cards */
+.report-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.report-card{background:rgba(255,255,255,.9);border-radius:20px;padding:24px;border:1px solid rgba(168,85,247,.12);text-align:center;cursor:pointer;transition:all .25s;box-shadow:0 4px 12px rgba(147,51,234,.06)}
+.report-card:hover{border-color:#a855f7;box-shadow:0 8px 24px rgba(147,51,234,.16);transform:translateY(-4px)}
+.report-icon{font-size:32px;margin-bottom:10px}
+.report-title{font-size:13px;font-weight:600;color:#1e293b}
+.report-desc{font-size:11px;color:#64748b;margin-top:3px}
+/* KPI card cute */
+.kpi-card{background:rgba(255,255,255,.9);border-radius:18px;padding:18px 16px;border:1px solid rgba(168,85,247,.1);text-align:center;box-shadow:0 4px 14px rgba(147,51,234,.07);transition:all .2s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(147,51,234,.12)}
+/* Dept bar */
+.dept-item{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dept-name{width:120px;font-size:12px;color:#334155;flex-shrink:0}
+.dept-bar-wrap{flex:1;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+.dept-bar-fill{height:100%;border-radius:4px}
+.dept-pct{width:44px;text-align:right;font-size:12px;font-weight:600}
+/* Cute scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:linear-gradient(#a855f7,#c084fc);border-radius:10px}
+::-webkit-scrollbar-track{background:transparent}
+/* Section heading */
+.sec-title{font-size:15px;font-weight:700;color:#5b21b6;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.sec-title::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,#e9d5ff,transparent);border-radius:2px;margin-left:8px}
+.filter-bar{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:16px;padding:14px 18px;margin-bottom:16px;border:1px solid rgba(168,85,247,.12);display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(147,51,234,.05)}
+select,input[type=text],input[type=month]{padding:7px 12px;border:1.5px solid rgba(168,85,247,.2);border-radius:50px;font-size:12px;outline:none;background:white;color:#334155;font-family:'Prompt',sans-serif;transition:border-color .2s}
+.table-header{padding:14px 20px;border-bottom:1px solid #f3e8ff;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(245,240,255,.6),rgba(255,255,255,0))}
+.table-header h3{font-size:14px;font-weight:700;color:#5b21b6}
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(76,29,149,.25);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:#fff;border-radius:24px;padding:28px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(147,51,234,.2);animation:bounce-in .3s ease}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:18px;color:#1e293b}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:#3b82f6}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+/* Notification dot */
+.notif{position:relative}
+.notif-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:2px solid #fff}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <!-- Cute cat mascot SVG -->
+    <div class="mascot-wrap">
+      <svg width="82" height="92" viewBox="0 0 82 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Coin bag body -->
+        <ellipse cx="41" cy="75" rx="20" ry="14" fill="#fde68a" opacity=".95"/>
+        <ellipse cx="41" cy="68" rx="16" ry="10" fill="#fcd34d"/>
+        <text x="41" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e" font-family="Prompt,sans-serif">฿</text>
+        <!-- Tie/ribbon on bag -->
+        <ellipse cx="41" cy="59" rx="7" ry="4" fill="#f0abfc"/>
+        <!-- Cat body -->
+        <ellipse cx="41" cy="46" rx="22" ry="20" fill="#e9d5ff"/>
+        <!-- Cat head -->
+        <circle cx="41" cy="26" r="20" fill="#f3e8ff"/>
+        <!-- Ears -->
+        <ellipse cx="24" cy="10" rx="8" ry="11" fill="#e9d5ff"/>
+        <ellipse cx="58" cy="10" rx="8" ry="11" fill="#e9d5ff"/>
+        <ellipse cx="24" cy="10" rx="5" ry="7" fill="#f9a8d4"/>
+        <ellipse cx="58" cy="10" rx="5" ry="7" fill="#f9a8d4"/>
+        <!-- Glasses frames -->
+        <circle cx="34" cy="25" r="8" fill="rgba(255,255,255,.6)" stroke="#a855f7" stroke-width="1.8"/>
+        <circle cx="48" cy="25" r="8" fill="rgba(255,255,255,.6)" stroke="#a855f7" stroke-width="1.8"/>
+        <line x1="42" y1="25" x2="40" y2="25" stroke="#a855f7" stroke-width="1.8"/>
+        <!-- Eyes (behind glasses) -->
+        <circle cx="34" cy="25" r="4" fill="#5b21b6"/>
+        <circle cx="48" cy="25" r="4" fill="#5b21b6"/>
+        <circle cx="35.2" cy="23.5" r="1.4" fill="white"/>
+        <circle cx="49.2" cy="23.5" r="1.4" fill="white"/>
+        <!-- Nose -->
+        <ellipse cx="41" cy="31" rx="2.5" ry="1.8" fill="#f9a8d4"/>
+        <!-- Smile -->
+        <path d="M37.5 34 Q41 38 44.5 34" stroke="#7e22ce" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- Whiskers left -->
+        <line x1="18" y1="30" x2="31" y2="32" stroke="#c084fc" stroke-width="1" opacity=".7"/>
+        <line x1="18" y1="34" x2="31" y2="34" stroke="#c084fc" stroke-width="1" opacity=".7"/>
+        <!-- Whiskers right -->
+        <line x1="64" y1="30" x2="51" y2="32" stroke="#c084fc" stroke-width="1" opacity=".7"/>
+        <line x1="64" y1="34" x2="51" y2="34" stroke="#c084fc" stroke-width="1" opacity=".7"/>
+        <!-- Sparkles -->
+        <text x="66" y="18" font-size="10" opacity=".8">✨</text>
+        <text x="4" y="20" font-size="8" opacity=".6">⭐</text>
+      </svg>
+    </div>
+    <div class="mascot-speech">สวัสดีค่ะพี่หญิง! 🐾<br>วันนี้งบดีมั้ยคะ?</div>
+    <h2>💜 Budget Control</h2>
+    <p>ระบบบริหารงบประมาณองค์กร</p>
+  </div>
+
+  <div class="nav-section">ภาพรวม</div>
+  <div class="nav-item active" onclick="showPage('dashboard',this)">
+    <span class="nav-icon">📊</span> Executive Dashboard
+  </div>
+
+  <div class="nav-section">งบประมาณ</div>
+  <div class="nav-item" onclick="showPage('revenue',this)">
+    <span class="nav-icon">💰</span> ประมาณการรายรับ
+  </div>
+  <div class="nav-item" onclick="showPage('expense',this)">
+    <span class="nav-icon">📋</span> งบประมาณรายจ่าย
+  </div>
+  <div class="nav-item" onclick="showPage('actual',this)">
+    <span class="nav-icon">📥</span> บันทึกผลจริง
+  </div>
+
+  <div class="nav-item" onclick="showPage('loan',this)">
+    <span class="nav-icon">🏦</span> กู้เงิน / ชำระคืน P/N & Loan
+  </div>
+
+  <div class="nav-item" onclick="showPage('cashplan',this)">
+    <span class="nav-icon">💵</span> ประมาณการเงินคงเหลือ
+  </div>
+
+  <div class="nav-item" onclick="showPage('daily',this)">
+    <span class="nav-icon">📆</span> ประมาณการรายวัน
+  </div>
+
+  <div class="nav-section">วิเคราะห์</div>
+  <div class="nav-item" onclick="showPage('compare',this)">
+    <span class="nav-icon">⚖️</span> Budget vs Actual
+  </div>
+  <div class="nav-item" onclick="showPage('weekly',this)">
+    <span class="nav-icon">📅</span> สรุปรายสัปดาห์
+  </div>
+  <div class="nav-item" onclick="showPage('alert',this)">
+    <span class="nav-icon notif">🔔<span class="notif-dot"></span></span> การแจ้งเตือน
+  </div>
+
+  <div class="nav-section">รายงาน</div>
+  <div class="nav-item" onclick="showPage('reports',this)">
+    <span class="nav-icon">📄</span> ออกรายงาน
+  </div>
+  <div class="nav-item" onclick="showPage('ai',this)">
+    <span class="nav-icon">🤖</span> AI Analytics
+  </div>
+
+  <div class="nav-section">ตั้งค่า</div>
+  <div class="nav-item" onclick="showPage('users',this)">
+    <span class="nav-icon">👥</span> จัดการผู้ใช้งาน
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">S</div>
+      <div>
+        <div class="user-name">สุดารัตน์ ปักเขตานัง</div>
+        <div class="user-role">Finance Officer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Executive Dashboard</h1>
+      <p id="page-sub">ปีงบประมาณ 2569 • อัปเดตล่าสุด: 3 มิ.ย. 2569</p>
+    </div>
+    <div class="topbar-right">
+      <select onchange="changeYear(this.value)" style="font-weight:600">
+        <option>2569</option>
+        <option>2568</option>
+      </select>
+      <button class="btn-excel" onclick="exportCurrentPage()" title="Export หน้านี้เป็น Excel">⬇️ Excel</button>
+      <button class="btn btn-primary" onclick="openModal()">+ เพิ่มข้อมูล</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ========== DASHBOARD ========== -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- Hero banner -->
+      <div style="background:linear-gradient(135deg,#7c3aed,#9333ea,#c026d3);border-radius:22px;padding:20px 28px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 30px rgba(124,58,237,.3);position:relative;overflow:hidden">
+        <div style="position:absolute;top:-20px;right:200px;width:120px;height:120px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+        <div style="position:absolute;bottom:-30px;right:120px;width:90px;height:90px;background:rgba(255,255,255,.05);border-radius:50%"></div>
+        <div>
+          <div style="color:rgba(255,255,255,.75);font-size:12px;font-weight:500">ยินดีต้อนรับ สุดารัตน์ ✨</div>
+          <div style="color:#fff;font-size:20px;font-weight:700;margin-top:4px">ภาพรวมงบประมาณ ปี 2569</div>
+          <div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:6px">อัปเดตล่าสุด: 3 มิ.ย. 2569 • สถานะ: <span style="background:rgba(255,255,255,.2);border-radius:50px;padding:2px 10px">ใกล้เคียงเป้าหมาย 🎯</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <!-- Mini characters on banner -->
+          <svg width="70" height="75" viewBox="0 0 70 75" fill="none">
+            <!-- Tiny bunny -->
+            <ellipse cx="35" cy="60" rx="16" ry="12" fill="rgba(255,255,255,.25)"/>
+            <circle cx="35" cy="40" r="16" fill="rgba(255,255,255,.3)"/>
+            <ellipse cx="25" cy="26" rx="6" ry="10" fill="rgba(255,255,255,.25)"/>
+            <ellipse cx="45" cy="26" rx="6" ry="10" fill="rgba(255,255,255,.25)"/>
+            <circle cx="30" cy="39" r="3.5" fill="rgba(255,255,255,.9)"/>
+            <circle cx="40" cy="39" r="3.5" fill="rgba(255,255,255,.9)"/>
+            <circle cx="31" cy="38" r="1.2" fill="#5b21b6"/>
+            <circle cx="41" cy="38" r="1.2" fill="#5b21b6"/>
+            <ellipse cx="35" cy="45" rx="2" ry="1.5" fill="rgba(255,192,203,.8)"/>
+            <path d="M32 47 Q35 50 38 47" stroke="rgba(255,255,255,.8)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+            <text x="28" y="68" font-size="14">💰</text>
+          </svg>
+          <svg width="55" height="62" viewBox="0 0 55 62" fill="none">
+            <!-- Tiny bear with chart -->
+            <circle cx="27" cy="32" r="14" fill="rgba(255,255,255,.22)"/>
+            <circle cx="20" cy="21" r="6" fill="rgba(255,255,255,.2)"/>
+            <circle cx="34" cy="21" r="6" fill="rgba(255,255,255,.2)"/>
+            <circle cx="27" cy="32" r="9" fill="rgba(255,255,255,.3)"/>
+            <circle cx="23" cy="30" r="2.5" fill="rgba(255,255,255,.9)"/>
+            <circle cx="31" cy="30" r="2.5" fill="rgba(255,255,255,.9)"/>
+            <ellipse cx="27" cy="35" rx="1.5" ry="1" fill="rgba(255,192,203,.9)"/>
+            <text x="18" y="55" font-size="16">📊</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="summary-grid">
+        <div class="summary-card" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe)">
+          <div style="font-size:28px;margin-bottom:6px">📈</div>
+          <div class="card-label">รายรับประมาณการ (YTD)</div>
+          <div class="card-value" style="color:#6d28d9">฿124.5M</div>
+          <div class="card-sub" style="color:#7c3aed">เป้าหมายปีนี้</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)">
+          <div style="font-size:28px;margin-bottom:6px">✅</div>
+          <div class="card-label">รายรับจริง (YTD)</div>
+          <div class="card-value" style="color:#15803d">฿118.2M</div>
+          <div class="card-sub text-yellow">▼ ต่ำกว่าเป้า 4.9%</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fff7ed,#ffedd5)">
+          <div style="font-size:28px;margin-bottom:6px">📋</div>
+          <div class="card-label">รายจ่ายประมาณการ (YTD)</div>
+          <div class="card-value" style="color:#c2410c">฿89.3M</div>
+          <div class="card-sub" style="color:#ea580c">งบที่อนุมัติ</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fef2f2,#fee2e2)">
+          <div style="font-size:28px;margin-bottom:6px">💸</div>
+          <div class="card-label">รายจ่ายจริง (YTD)</div>
+          <div class="card-value" style="color:#dc2626">฿84.7M</div>
+          <div class="card-sub text-green">▼ ประหยัดได้ 5.1%</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5)">
+          <div style="font-size:28px;margin-bottom:6px">💎</div>
+          <div class="card-label">กำไรสุทธิ</div>
+          <div class="card-value" style="color:#065f46">฿33.5M</div>
+          <div class="card-sub text-green">▲ +8.2% vs เป้า</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fdf4ff,#fae8ff)">
+          <div style="font-size:28px;margin-bottom:6px">🎯</div>
+          <div class="card-label">% บรรลุเป้าหมาย</div>
+          <div class="card-value" style="color:#9333ea">94.9%</div>
+          <div class="card-sub text-yellow">ใกล้เคียงเป้าหมาย ⭐</div>
+        </div>
+      </div>
+
+      <!-- Charts row 1 -->
+      <div class="charts-row charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Revenue vs Expense Trend <span>รายเดือน 2569</span></div>
+          <canvas id="trendChart" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">สัดส่วนค่าใช้จ่าย <span>ตามหมวดหมู่</span></div>
+          <canvas id="expensePieChart" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Charts row 2 -->
+      <div class="charts-row charts-row-3">
+        <div class="chart-card">
+          <div class="chart-title">Budget vs Actual <span>รายรับรายเดือน</span></div>
+          <canvas id="revenueBarChart" height="140"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Profit Trend <span>กำไรสุทธิรายเดือน</span></div>
+          <canvas id="profitChart" height="140"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Cash Flow <span>กระแสเงินสดสุทธิ</span></div>
+          <canvas id="cashflowChart" height="140"></canvas>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="sec-title">📌 Key Performance Indicators</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value text-green">27.0%</div>
+          <div class="kpi-label">Gross Profit Margin</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:27%;background:#10b981"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:#9333ea">22.3%</div>
+          <div class="kpi-label">Net Profit Margin</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:22%;background:#3b82f6"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value text-yellow">71.7%</div>
+          <div class="kpi-label">Expense Ratio</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:72%;background:#f59e0b"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value text-green">12.4%</div>
+          <div class="kpi-label">Revenue Growth YoY</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:62%;background:#10b981"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:#8b5cf6">94.9%</div>
+          <div class="kpi-label">Budget Accuracy</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:95%;background:#a855f7"></div></div>
+        </div>
+      </div>
+
+      <!-- Bottom: Weekly Performance -->
+      <div class="sec-title">📅 Weekly Performance</div>
+      <div class="bottom-grid">
+        <div class="chart-card">
+          <div class="chart-title">Top 5 รายรับสูงสุด <span>สัปดาห์ที่แล้ว</span></div>
+          <div class="performer-item"><span class="rank">1</span><span class="p-name">บริษัท ABC จำกัด</span><span class="p-val text-green">฿4.2M</span></div>
+          <div class="performer-item"><span class="rank">2</span><span class="p-name">โปรเจค XYZ</span><span class="p-val text-green">฿3.8M</span></div>
+          <div class="performer-item"><span class="rank">3</span><span class="p-name">สาขาเชียงใหม่</span><span class="p-val text-green">฿2.9M</span></div>
+          <div class="performer-item"><span class="rank">4</span><span class="p-name">โปรเจค DEF</span><span class="p-val text-green">฿2.4M</span></div>
+          <div class="performer-item"><span class="rank">5</span><span class="p-name">สาขาภูเก็ต</span><span class="p-val text-green">฿1.8M</span></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top 5 ค่าใช้จ่ายสูงสุด <span>สัปดาห์ที่แล้ว</span></div>
+          <div class="performer-item"><span class="rank">1</span><span class="p-name">เงินเดือนพนักงาน</span><span class="p-val text-red">฿8.5M</span></div>
+          <div class="performer-item"><span class="rank">2</span><span class="p-name">ค่าการตลาด</span><span class="p-val text-red">฿1.9M</span></div>
+          <div class="performer-item"><span class="rank">3</span><span class="p-name">ค่าเช่าสำนักงาน</span><span class="p-val text-red">฿1.2M</span></div>
+          <div class="performer-item"><span class="rank">4</span><span class="p-name">ค่าสาธารณูปโภค</span><span class="p-val text-red">฿0.45M</span></div>
+          <div class="performer-item"><span class="rank">5</span><span class="p-name">ค่าเดินทาง</span><span class="p-val text-red">฿0.32M</span></div>
+        </div>
+      </div>
+
+      <!-- Dept performance -->
+      <div class="bottom-grid">
+        <div class="chart-card">
+          <div class="chart-title">หน่วยงานที่ใช้งบเกิน ⚠️</div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่ายการตลาด</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:115%;background:#ef4444"></div></div>
+            <span class="dept-pct text-red">115%</span>
+          </div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่าย IT</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:108%;background:#f97316"></div></div>
+            <span class="dept-pct text-red">108%</span>
+          </div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่ายขาย</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:103%;background:#f59e0b"></div></div>
+            <span class="dept-pct text-yellow">103%</span>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">หน่วยงานที่ทำได้ดีกว่าเป้า ✅</div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่าย Operations</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:78%;background:#10b981"></div></div>
+            <span class="dept-pct text-green">78%</span>
+          </div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่าย HR</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:82%;background:#10b981"></div></div>
+            <span class="dept-pct text-green">82%</span>
+          </div>
+          <div class="dept-item">
+            <span class="dept-name">ฝ่ายบัญชี</span>
+            <div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:89%;background:#34d399"></div></div>
+            <span class="dept-pct text-green">89%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== REVENUE PAGE ========== -->
+    <div class="page" id="page-revenue">
+      <div class="filter-bar">
+        <label>หมวดรับ:</label>
+        <select><option>ทั้งหมด</option><option>ยอดขายตรงพิธีกร</option><option>ยอดขาย Outlet</option><option>งานขายมหกรรมสินค้าลดราคา</option><option>ลูกหนี้ต่างประเทศ</option><option>ลูกหนี้ในประเทศ - รับโอนเงิน</option><option>ลูกหนี้ในประเทศ - เช็ค</option><option>ลูกหนี้ในประเทศ - เช็คล่วงหน้า</option><option>ลูกหนี้ในประเทศ - เงินสด</option><option>เงินปันผลรับ</option><option>รับอื่นๆ</option></select>
+        <label>ปี:</label>
+        <select><option>2569</option><option>2568</option></select>
+        <button class="btn btn-primary">🔍 ค้นหา</button>
+        <button class="btn btn-secondary" onclick="openModal('revenue')">+ เพิ่มประมาณการ</button>
+        <button class="btn-excel" onclick="exportPageExcel('revenue')">⬇️ Export Excel</button>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>📈 ประมาณการรายรับ vs ผลจริง ปี 2569</h3>
+          <span class="badge badge-blue">YTD: ม.ค. – พ.ค. 2569</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>เดือน</th><th>แผนก / สาขา</th><th>Budget (฿)</th><th>Actual (฿)</th>
+              <th>Variance (฿)</th><th>Var%</th><th>YTD Budget</th><th>YTD Actual</th><th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="revenueTableBody"></tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Revenue Trend: Budget vs Actual <span>รายเดือน</span></div>
+        <canvas id="revLineChart" height="80"></canvas>
+      </div>
+    </div>
+
+    <!-- ========== EXPENSE PAGE ========== -->
+    <div class="page" id="page-expense">
+      <div class="filter-bar">
+        <label>หมวดจ่าย:</label>
+        <select><option>ทั้งหมด</option><option>จ่ายเจ้าหนี้</option><option>จ่ายต่างประเทศ</option><option>จ่ายภาษี</option><option>จ่ายค่าไฟฟ้า</option><option>เงินเดือน</option><option>ค่านายหน้า</option><option>เงินชดเชย/เกษียณอายุ</option><option>ประกันสังคม</option><option>เงินกู้พนักงาน</option><option>เงินยืมทดรองพนักงาน</option><option>จ่ายเงินปันผล</option><option>จ่ายอื่นๆ</option></select>
+        <label>แผนก:</label>
+        <select><option>ทั้งหมด</option><option>การตลาด</option><option>IT</option><option>Operations</option><option>HR</option><option>บัญชี</option></select>
+        <button class="btn btn-primary">🔍 ค้นหา</button>
+        <button class="btn btn-secondary" onclick="openModal('expense')">+ เพิ่มงบประมาณ</button>
+        <button class="btn-excel" onclick="exportPageExcel('expense')">⬇️ Export Excel</button>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>📋 งบประมาณค่าใช้จ่าย vs ผลจริง ปี 2569</h3>
+          <div style="display:flex;gap:8px">
+            <span class="badge badge-good">ประหยัดรวม ฿4.6M</span>
+            <span class="badge badge-blue">YTD 5 เดือน</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>หมวดค่าใช้จ่าย</th><th>แผนก</th><th>Budget รายเดือน</th>
+              <th>Actual รายเดือน</th><th>Variance</th><th>Var%</th>
+              <th>YTD Budget</th><th>YTD Actual</th><th>สถานะ</th><th>อนุมัติ</th>
+            </tr>
+          </thead>
+          <tbody id="expenseTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== ACTUAL PAGE ========== -->
+    <div class="page" id="page-actual">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="chart-card">
+          <div class="chart-title">📥 นำเข้าข้อมูลจาก Excel / CSV</div>
+          <div style="border:2px dashed #e5e7eb;border-radius:8px;padding:30px;text-align:center;cursor:pointer;background:#fafbfc" onclick="alert('เชื่อมต่อกับระบบ File Upload ของคุณ')">
+            <div style="font-size:36px;margin-bottom:10px">📂</div>
+            <div style="font-size:13px;font-weight:600;color:#334155">ลากไฟล์มาวางที่นี่</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">รองรับ .xlsx, .xls, .csv</div>
+            <button class="btn btn-primary" style="margin-top:14px">เลือกไฟล์</button>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📝 บันทึกรายการด้วยตนเอง</div>
+          <div class="form-group"><label>ประเภท</label><select style="width:100%"><option>รายรับ</option><option>รายจ่าย</option></select></div>
+          <div class="form-group"><label>วันที่</label><input type="text" placeholder="วว/ดด/ปปปป" style="width:100%"></div>
+          <div class="form-group"><label>หมวดหมู่</label><select style="width:100%"><option>เลือกหมวดหมู่</option><option>รายรับจากการขาย</option><option>เงินเดือน</option><option>ค่าเช่า</option><option>ค่าการตลาด</option></select></div>
+          <div class="form-group"><label>จำนวนเงิน (฿)</label><input type="text" placeholder="0.00" style="width:100%"></div>
+          <div class="form-group"><label>หมายเหตุ</label><input type="text" placeholder="รายละเอียดเพิ่มเติม" style="width:100%"></div>
+          <button class="btn btn-primary" style="width:100%">✅ บันทึกข้อมูล</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><h3>📋 รายการล่าสุด</h3><span class="badge badge-blue">50 รายการ</span></div>
+        <table>
+          <thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวดหมู่</th><th>แผนก</th><th>จำนวนเงิน</th><th>สถานะตรวจสอบ</th><th>บันทึกโดย</th></tr></thead>
+          <tbody id="actualTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== LOAN PAGE ========== -->
+    <div class="page" id="page-loan">
+
+      <!-- Summary cards -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="card-icon">🏦</div>
+          <div class="card-label">วงเงินกู้รวม (P/N + Loan)</div>
+          <div class="card-value">฿45.0M</div>
+          <div class="card-sub" style="color:#9333ea">วงเงินที่ได้รับอนุมัติ</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">📤</div>
+          <div class="card-label">กู้สะสม YTD</div>
+          <div class="card-value">฿32.5M</div>
+          <div class="card-sub text-yellow">เบิกใช้แล้ว 72.2%</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">📥</div>
+          <div class="card-label">ชำระคืนสะสม YTD</div>
+          <div class="card-value text-green">฿18.8M</div>
+          <div class="card-sub text-green">ตรงกำหนด 100%</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">💳</div>
+          <div class="card-label">ยอดหนี้คงค้าง</div>
+          <div class="card-value text-red">฿13.7M</div>
+          <div class="card-sub text-red">ต้องชำระภายในปีนี้</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">💰</div>
+          <div class="card-label">วงเงินคงเหลือ</div>
+          <div class="card-value" style="color:#9333ea">฿12.5M</div>
+          <div class="card-sub" style="color:#9333ea">สามารถกู้เพิ่มได้</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">📊</div>
+          <div class="card-label">Debt-to-Equity Ratio</div>
+          <div class="card-value text-yellow">0.42</div>
+          <div class="card-sub text-green">อยู่ในระดับปลอดภัย</div>
+        </div>
+      </div>
+
+      <!-- Filter + Add -->
+      <div class="filter-bar">
+        <label>ประเภท:</label>
+        <select id="loanTypeFilter">
+          <option value="all">ทั้งหมด</option>
+          <option value="pn">P/N (Promissory Note)</option>
+          <option value="loan">Loan (สินเชื่อระยะยาว)</option>
+        </select>
+        <label>สถานะ:</label>
+        <select>
+          <option>ทั้งหมด</option>
+          <option>ค้างชำระ</option>
+          <option>ชำระแล้ว</option>
+          <option>ยังไม่ถึงกำหนด</option>
+        </select>
+        <label>ธนาคาร:</label>
+        <select>
+          <option>ทั้งหมด</option>
+          <option>ธ.กรุงเทพ (BBL)</option>
+          <option>ธ.กรุงไทย (KTB)</option>
+          <option>ธ.กสิกรไทย (KBANK)</option>
+          <option>ธ.กรุงศรีอยุธยา (BAY)</option>
+          <option>ธ.ไทยพาณิชย์ (SCB)</option>
+          <option>ธ.เพื่อการส่งออกและนำเข้า (EXIM)</option>
+          <option>ธ.ยูโอบี (UOB)</option>
+          <option>ธ.แลนด์ แอนด์ เฮ้าส์ (LHB)</option>
+          <option>ธ.ซีไอเอ็มบี ไทย (CIMB THAI)</option>
+        </select>
+        <button class="btn btn-primary" onclick="openModal('loan')">+ บันทึกการกู้เงินใหม่</button>
+        <button class="btn btn-secondary" onclick="openModal('repay')">+ บันทึกการชำระคืน</button>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row charts-row-2" style="margin-bottom:20px">
+        <div class="chart-card">
+          <div class="chart-title">แนวโน้มหนี้คงค้าง vs การชำระคืน <span>รายเดือน 2569</span></div>
+          <canvas id="loanTrendChart" height="110"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">สัดส่วนหนี้ตามประเภท</div>
+          <canvas id="loanPieChart" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Borrowing Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3>📤 รายการกู้เงิน (Borrowing)</h3>
+          <div style="display:flex;gap:8px">
+            <span class="badge badge-blue">P/N: ฿18.5M</span>
+            <span class="badge" style="background:#ede9fe;color:#7e22ce">Loan: ฿14.0M</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>เลขที่สัญญา</th>
+              <th>ประเภท</th>
+              <th>ธนาคาร / สถาบัน</th>
+              <th>วันที่กู้</th>
+              <th>วันครบกำหนด</th>
+              <th>วงเงิน (฿)</th>
+              <th>ยอดกู้จริง (฿)</th>
+              <th>อัตราดอกเบี้ย</th>
+              <th>วัตถุประสงค์</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="loanBorrowBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Repayment Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3>📥 รายการชำระคืน (Repayment)</h3>
+          <span class="badge badge-good">ชำระแล้ว ฿18.8M</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>เลขที่สัญญา</th>
+              <th>ประเภท</th>
+              <th>ธนาคาร</th>
+              <th>วันที่ชำระ</th>
+              <th>ยอดเงินต้น (฿)</th>
+              <th>ดอกเบี้ย (฿)</th>
+              <th>รวมชำระ (฿)</th>
+              <th>ยอดคงเหลือหลังชำระ (฿)</th>
+              <th>วิธีชำระ</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="loanRepayBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Interest Payment Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3>💸 รายการชำระดอกเบี้ยเงินกู้</h3>
+          <div style="display:flex;gap:8px">
+            <span class="badge badge-bad">ดอกเบี้ยจ่าย YTD: ฿433,439</span>
+            <button class="btn btn-primary" style="padding:4px 12px;font-size:11px" onclick="openModal('interest')">+ บันทึกดอกเบี้ย</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>เลขที่สัญญา</th>
+              <th>ประเภท</th>
+              <th>ธนาคาร</th>
+              <th>งวดดอกเบี้ย</th>
+              <th>วันที่ชำระ</th>
+              <th>ยอดเงินต้นคงค้าง (฿)</th>
+              <th>อัตราดอกเบี้ย</th>
+              <th>จำนวนวัน</th>
+              <th>ดอกเบี้ยที่ชำระ (฿)</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="loanInterestBody"></tbody>
+        </table>
+        <!-- Summary row -->
+        <div style="padding:12px 18px;background:#faf5ff;border-top:1px solid #ede9fe;display:flex;gap:24px;font-size:12px">
+          <span>ดอกเบี้ยรวม ม.ค.: <strong style="color:#ef4444">฿75,625</strong></span>
+          <span>ดอกเบี้ยรวม ก.พ.: <strong style="color:#ef4444">฿117,188</strong></span>
+          <span>ดอกเบี้ยรวม มี.ค.: <strong style="color:#ef4444">฿123,563</strong></span>
+          <span>ดอกเบี้ยรวม เม.ย.: <strong style="color:#ef4444">฿85,938</strong></span>
+          <span>ดอกเบี้ยรวม พ.ค.: <strong style="color:#ef4444">฿31,125</strong></span>
+          <span style="margin-left:auto;font-weight:700;color:#7e22ce">YTD รวม: ฿433,439</span>
+        </div>
+      </div>
+
+      <!-- Upcoming repayment alert -->
+      <div class="sec-title">⏰ กำหนดชำระที่ใกล้ถึง</div>
+      <div class="alert-item alert-red">🚨 <strong>P/N-2569-003 (ธ.กสิกรไทย)</strong> — ครบกำหนด 15 มิ.ย. 2569 ยอดชำระ ฿2,500,000 (เงินต้น ฿2.4M + ดอกเบี้ย ฿100K)</div>
+      <div class="alert-item alert-yellow">⚠️ <strong>LOAN-2568-001 (ธ.กรุงเทพ)</strong> — ครบกำหนดงวดถัดไป 30 มิ.ย. 2569 ยอด ฿1,850,000</div>
+      <div class="alert-item alert-green">✅ <strong>P/N-2569-001 (ธ.ไทยพาณิชย์)</strong> — ชำระครบแล้ว ปิดสัญญาเรียบร้อย</div>
+
+    </div>
+
+    <!-- ========== CASH PLAN PAGE ========== -->
+    <div class="page" id="page-cashplan">
+
+      <!-- Summary cards -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="card-icon">🏁</div>
+          <div class="card-label">เงินต้นงวด (ต้นปี)</div>
+          <div class="card-value" style="color:#9333ea">฿18.5M</div>
+          <div class="card-sub" style="color:#9333ea">ยอด ณ 1 ม.ค. 2569</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">📈</div>
+          <div class="card-label">รายรับสะสม YTD</div>
+          <div class="card-value text-green">฿118.2M</div>
+          <div class="card-sub text-green">ผลจริง 5 เดือน</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">📉</div>
+          <div class="card-label">รายจ่ายสะสม YTD</div>
+          <div class="card-value text-red">฿84.7M</div>
+          <div class="card-sub text-red">รวมดอกเบี้ย ฿0.43M</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">🏦</div>
+          <div class="card-label">ชำระหนี้คืน YTD</div>
+          <div class="card-value text-red">฿18.8M</div>
+          <div class="card-sub text-red">เงินต้น + ดอกเบี้ย</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">💵</div>
+          <div class="card-label">เงินคงเหลือใช้ได้ (ปัจจุบัน)</div>
+          <div class="card-value text-green">฿33.2M</div>
+          <div class="card-sub text-green">18.5 + 118.2 − 84.7 − 18.8</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">🔮</div>
+          <div class="card-label">คาดการณ์สิ้นปี</div>
+          <div class="card-value" style="color:#9333ea">฿41.6M</div>
+          <div class="card-sub" style="color:#9333ea">AI คาดการณ์ ± 5%</div>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <label>ปี:</label>
+        <select><option>2569</option><option>2568</option></select>
+        <label>มุมมอง:</label>
+        <select id="cashviewSelect" onchange="renderCashPlanTable(this.value)">
+          <option value="monthly">รายเดือน</option>
+          <option value="quarter">รายไตรมาส</option>
+        </select>
+        <label>รวมเงินกู้:</label>
+        <select id="includeLoan">
+          <option value="yes">รวมกู้เงิน / ชำระคืน</option>
+          <option value="no">เฉพาะ Revenue / Expense</option>
+        </select>
+        <button class="btn btn-primary" onclick="renderCashPlanTable(document.getElementById('cashviewSelect').value)">🔄 คำนวณใหม่</button>
+        <button class="btn btn-secondary">📥 Export Excel</button>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-card" style="margin-bottom:20px">
+        <div class="chart-title">💵 ประมาณการเงินคงเหลือสะสมรายเดือน <span>Budget vs Actual + Forecast</span></div>
+        <canvas id="cashPlanChart" height="90"></canvas>
+      </div>
+
+      <!-- Main table -->
+      <div class="table-card" style="margin-bottom:20px">
+        <div class="table-header">
+          <h3>📋 ตารางประมาณการเงินคงเหลือ</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="badge badge-good">เงินคงเหลือปัจจุบัน ฿33.2M</span>
+            <span class="badge" style="background:#f3e8ff;color:#7e22ce">ประมาณการ 7 เดือนที่เหลือ</span>
+          </div>
+        </div>
+        <table id="cashPlanTable">
+          <thead>
+            <tr>
+              <th style="min-width:90px">เดือน</th>
+              <th style="text-align:right;color:#7e22ce">เงินต้นงวด (฿)</th>
+              <th style="text-align:right;color:#10b981">+ รายรับ Budget (฿)</th>
+              <th style="text-align:right;color:#16a34a">+ รายรับ Actual (฿)</th>
+              <th style="text-align:right;color:#ef4444">− รายจ่าย Budget (฿)</th>
+              <th style="text-align:right;color:#dc2626">− รายจ่าย Actual (฿)</th>
+              <th style="text-align:right;color:#f59e0b">− ชำระหนี้ (฿)</th>
+              <th style="text-align:right;color:#9333ea;font-weight:700">= เงินคงเหลือ Budget (฿)</th>
+              <th style="text-align:right;color:#7e22ce;font-weight:700">= เงินคงเหลือ Actual (฿)</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="cashPlanBody"></tbody>
+          <tfoot id="cashPlanFoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- Mini insight -->
+      <div class="bottom-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 Waterfall — เงินคงเหลือสะสม ม.ค.–พ.ค.</div>
+          <canvas id="cashWaterfallChart" height="160"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">💡 สรุป Insight เงินสด</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <div class="alert-item alert-green" style="margin-bottom:0">✅ เงินคงเหลือปัจจุบัน <strong>฿33.2M</strong> เพียงพอรองรับค่าใช้จ่าย <strong>~4.7 เดือน</strong></div>
+            <div class="alert-item alert-yellow" style="margin-bottom:0">⚠️ มิ.ย. มียอดชำระหนี้ P/N + Loan รวม <strong>฿4.35M</strong> ควรเตรียมเงินสดไว้ล่วงหน้า</div>
+            <div class="alert-item alert-green" style="margin-bottom:0">📈 รายรับ Q2 ดีขึ้นต่อเนื่อง คาดเงินคงเหลือสิ้น Q3 อยู่ที่ <strong>฿38–42M</strong></div>
+            <div class="alert-item alert-red" style="margin-bottom:0">🔴 ถ้ารายรับ Q3 ต่ำกว่าเป้า 10% เงินคงเหลือจะลงต่ำกว่า <strong>฿28M</strong> ควร standby วงเงิน P/N</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== DAILY CASH FLOW PAGE ========== -->
+    <div class="page" id="page-daily">
+
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#0f766e,#0d9488,#14b8a6);border-radius:22px;padding:18px 28px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 30px rgba(15,118,110,.3)">
+        <div>
+          <div style="color:rgba(255,255,255,.75);font-size:12px">รายวัน — Daily Cash Flow</div>
+          <div style="color:#fff;font-size:18px;font-weight:700;margin-top:3px">ประมาณการรับ-จ่าย และเงินคงเหลือรายวัน 💵</div>
+          <div style="color:rgba(255,255,255,.7);font-size:11px;margin-top:6px">สรุปยอดเงินคงเหลือและใช้ได้ทุกวัน • Import/Export Excel ได้</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-import" onclick="document.getElementById('importExcel').click()">⬆️ Import Excel</button>
+          <button class="btn-excel" onclick="exportDailyExcel()">⬇️ Export Excel</button>
+          <input type="file" id="importExcel" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImport(event)">
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="summary-grid" style="margin-bottom:20px">
+        <div class="summary-card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)">
+          <div style="font-size:26px;margin-bottom:5px">💰</div>
+          <div class="card-label">รับรวมวันนี้</div>
+          <div class="card-value daily-pos" id="sum-today-in">฿0</div>
+          <div class="card-sub text-green" id="sum-today-in-cat">-</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fef2f2,#fee2e2)">
+          <div style="font-size:26px;margin-bottom:5px">💸</div>
+          <div class="card-label">จ่ายรวมวันนี้</div>
+          <div class="card-value daily-neg" id="sum-today-out">฿0</div>
+          <div class="card-sub text-red" id="sum-today-out-cat">-</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe)">
+          <div style="font-size:26px;margin-bottom:5px">🏦</div>
+          <div class="card-label">เงินคงเหลือวันนี้</div>
+          <div class="card-value daily-bal" id="sum-today-bal">฿0</div>
+          <div class="card-sub" style="color:#9333ea">ยอดใช้ได้ ณ วันนี้</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fff7ed,#ffedd5)">
+          <div style="font-size:26px;margin-bottom:5px">📊</div>
+          <div class="card-label">รับรวมเดือนนี้</div>
+          <div class="card-value" style="color:#c2410c" id="sum-month-in">฿0</div>
+          <div class="card-sub text-yellow" id="count-entries">0 รายการ</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#fef9c3,#fef3c7)">
+          <div style="font-size:26px;margin-bottom:5px">📤</div>
+          <div class="card-label">จ่ายรวมเดือนนี้</div>
+          <div class="card-value" style="color:#92400e" id="sum-month-out">฿0</div>
+          <div class="card-sub text-yellow">รายจ่ายทุกประเภท</div>
+        </div>
+        <div class="summary-card" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5)">
+          <div style="font-size:26px;margin-bottom:5px">✅</div>
+          <div class="card-label">เงินคงเหลือสิ้นเดือน</div>
+          <div class="card-value daily-pos" id="sum-month-bal">฿0</div>
+          <div class="card-sub text-green">ยอดยกไปเดือนถัดไป</div>
+        </div>
+      </div>
+
+      <!-- Filter + Add form -->
+      <div class="bottom-grid" style="margin-bottom:20px">
+
+        <!-- Add entry form -->
+        <div class="chart-card">
+          <div class="chart-title">➕ เพิ่มรายการประมาณการรับ-จ่าย</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group">
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">วันที่ *</label>
+              <input type="date" id="entry-date" style="width:100%;padding:8px 12px;border:1.5px solid #ede9fe;border-radius:10px;font-family:'Prompt',sans-serif;font-size:12px;outline:none">
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">ประเภท *</label>
+              <select id="entry-type" style="width:100%;padding:8px 12px;border:1.5px solid #ede9fe;border-radius:10px;font-family:'Prompt',sans-serif;font-size:12px;outline:none" onchange="updateCatList()">
+                <option value="">เลือกประเภท</option>
+                <option value="รับ">💚 รับ (Revenue)</option>
+                <option value="จ่าย">❤️ จ่าย (Expense)</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">หมวดหมู่ *</label>
+              <select id="entry-cat" style="width:100%;padding:8px 12px;border:1.5px solid #ede9fe;border-radius:10px;font-family:'Prompt',sans-serif;font-size:12px;outline:none">
+                <option value="">— เลือกประเภทก่อน —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">จำนวนเงิน (฿) *</label>
+              <input type="number" id="entry-amt" placeholder="0.00" style="width:100%;padding:8px 12px;border:1.5px solid #ede9fe;border-radius:10px;font-family:'Prompt',sans-serif;font-size:12px;outline:none">
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">หมายเหตุ</label>
+              <input type="text" id="entry-note" placeholder="เพิ่มเติม..." style="width:100%;padding:8px 12px;border:1.5px solid #ede9fe;border-radius:10px;font-family:'Prompt',sans-serif;font-size:12px;outline:none">
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:10px" onclick="addDailyEntry()">✅ เพิ่มรายการ</button>
+        </div>
+
+        <!-- Import zone + chart -->
+        <div class="chart-card">
+          <div class="chart-title">📂 Import ข้อมูลจาก Excel/CSV</div>
+          <div class="upload-zone" onclick="document.getElementById('importExcel').click()">
+            <div style="font-size:40px;margin-bottom:10px">📊</div>
+            <div style="font-size:13px;font-weight:600;color:#5b21b6">ลากไฟล์มาวางหรือคลิกเพื่อเลือก</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">รองรับ .xlsx, .xls, .csv</div>
+            <div style="margin-top:12px;font-size:11px;color:#7c3aed;background:#f3e8ff;border-radius:8px;padding:8px">
+              📋 <

@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บริหารการเงินส่วนบุคคล 🐻🩷</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #e8789a;
+    --primary-dark: #d45f82;
+    --primary-light: #fce4ec;
+    --success: #81c784;
+    --success-dark: #4caf50;
+    --danger: #e57373;
+    --danger-dark: #c62828;
+    --purple: #ba68c8;
+    --purple-dark: #8e24aa;
+    --peach: #ffb3c1;
+    --bg: #fff0f5;
+    --card: #fffafc;
+    --card2: #fff5f8;
+    --text: #5c2d44;
+    --muted: #a0627a;
+    --border: #f8c8d8;
+    --nav-bg: linear-gradient(135deg,#f06292,#ec407a,#e91e8c);
+  }
+  body { font-family: 'Prompt', 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+    background-image: radial-gradient(circle at 10% 20%, #fce4ec55 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, #f8bbd055 0%, transparent 40%); }
+
+  /* ── Nav ── */
+  nav { background: var(--nav-bg); color: #fff; position: sticky; top: 0; z-index: 100;
+        box-shadow: 0 4px 16px rgba(233,30,140,.25); }
+  .nav-inner { max-width: 1200px; margin: auto; display: flex; align-items: center; gap: 2px; padding: 0 16px; }
+  .nav-brand { font-size: 1.05rem; font-weight: 700; padding: 14px 16px 14px 0; margin-right: 8px; white-space: nowrap;
+               display: flex; align-items: center; gap: 8px; }
+  .nav-brand .sticker-nav { width: 32px; height: 32px; }
+  .nav-btn { background: none; border: none; color: rgba(255,255,255,.85); cursor: pointer;
+             padding: 16px 14px; font-size: .85rem; font-weight: 500; transition: .15s; white-space: nowrap;
+             border-bottom: 3px solid transparent; font-family: inherit; }
+  .nav-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
+  .nav-btn.active { color: #fff; border-bottom-color: rgba(255,255,255,.9); background: rgba(255,255,255,.1); }
+
+  /* ── Layout ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── Section header ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .sec-header h1 { font-size: 1.3rem; font-weight: 700; color: var(--primary-dark); }
+  .sec-sticker { width: 52px; height: 52px; filter: drop-shadow(0 4px 8px rgba(233,30,140,.2)); animation: wobble 3s ease-in-out infinite; }
+  .sec-sticker2 { width: 48px; height: 48px; filter: drop-shadow(0 4px 8px rgba(233,30,140,.2)); animation: wobble 3s ease-in-out infinite 1.5s; }
+  @keyframes wobble { 0%,100%{transform:rotate(-4deg) scale(1)} 50%{transform:rotate(4deg) scale(1.06)} }
+
+  /* ── Summary cards ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--card); border-radius: 16px; padding: 20px; position: relative; overflow: hidden;
+          border: 1.5px solid var(--border); box-shadow: 0 2px 12px rgba(233,30,140,.08); }
+  .card::before { content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px;
+                  border-radius:50%; opacity:.08; }
+  .sum-income::before { background: var(--success); }
+  .sum-expense::before { background: var(--danger); }
+  .sum-balance::before { background: var(--primary); }
+  .sum-invest::before { background: var(--purple); }
+  .card-title { font-size: .75rem; color: var(--muted); font-weight: 600; letter-spacing: .05em; margin-bottom: 6px; text-transform: uppercase; }
+  .card-value { font-size: 1.55rem; font-weight: 700; }
+  .card-sub { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+  .sum-income .card-value { color: var(--success-dark); }
+  .sum-expense .card-value { color: var(--danger-dark); }
+  .sum-balance .card-value { color: var(--primary-dark); }
+  .sum-invest .card-value { color: var(--purple-dark); }
+  .card-icon { position: absolute; top: 14px; right: 16px; font-size: 1.6rem; opacity: .6; }
+
+  /* ── Charts ── */
+  .charts-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+  @media(max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
+                box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 20px; }
+  .chart-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 16px; color: var(--primary-dark); }
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* ── Month picker ── */
+  .month-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .month-row label { font-size: .9rem; color: var(--muted); font-weight: 500; }
+  input[type=month], input[type=date], input[type=text], input[type=number], select, textarea {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 13px;
+    font-size: .88rem; color: var(--text); background: #fff7fa; outline: none;
+    transition: border-color .15s, box-shadow .15s; font-family: inherit; }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(232,120,154,.18); }
+  textarea { resize: vertical; min-height: 60px; width: 100%; }
+  select option { background: #fff; }
+
+  /* ── Forms ── */
+  .form-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
+               box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 24px; margin-bottom: 24px; }
+  .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 20px; color: var(--primary-dark);
+                  display: flex; align-items: center; gap: 8px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; }
+  .form-full { grid-column: 1 / -1; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; border-radius: 10px;
+         border: none; cursor: pointer; font-size: .88rem; font-weight: 600; transition: .15s; font-family: inherit; }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff;
+                 box-shadow: 0 3px 10px rgba(232,120,154,.35); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(232,120,154,.45); }
+  .btn-danger { background: linear-gradient(135deg, #ef9a9a, var(--danger-dark)); color: #fff; }
+  .btn-danger:hover { transform: translateY(-1px); }
+  .btn-clear { background: #fce4ec; color: var(--primary-dark); border: 1px solid var(--border); }
+  .btn-clear:hover { background: #f8bbd0; }
+  .btn-sm { padding: 5px 12px; font-size: .78rem; border-radius: 8px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+
+  /* ── Table ── */
+  .table-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
+                box-shadow: 0 2px 12px rgba(233,30,140,.07); overflow: hidden; }
+  .table-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+                  border-bottom: 1.5px solid var(--border); flex-wrap: wrap; gap: 10px;
+                  background: linear-gradient(135deg, #fff0f5, #fce4ec33); }
+  .table-header h2 { font-size: .95rem; font-weight: 700; color: var(--primary-dark); }
+  .search-box { padding: 7px 13px; border: 1.5px solid var(--border); border-radius: 10px;
+                font-size: .83rem; width: 200px; background: #fff7fa; font-family: inherit; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #fdf0f5; padding: 10px 14px; text-align: left; font-size: .78rem;
+       color: var(--muted); font-weight: 700; border-bottom: 1.5px solid var(--border); }
+  td { padding: 11px 14px; font-size: .86rem; border-bottom: 1px solid #fce4ec; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fff5f8; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .73rem; font-weight: 600; }
+  .badge-income { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .badge-expense { background: #fce4ec; color: #ad1457; border: 1px solid #f48fb1; }
+  .badge-invest { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+  .amount-income { color: var(--success-dark); font-weight: 700; }
+  .amount-expense { color: var(--danger-dark); font-weight: 700; }
+  .amount-invest { color: var(--purple-dark); font-weight: 700; }
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); font-size: .9rem; }
+
+  /* ── Invest mini cards ── */
+  .invest-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .invest-mini-card { background: #fff5f8; border-radius: 12px; padding: 14px; border: 1.5px solid var(--border); }
+  .invest-mini-card .label { font-size: .73rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .invest-mini-card .val { font-size: 1.05rem; font-weight: 700; color: var(--purple-dark); }
+
+  /* ── Toast ── */
+  #toast { position: fixed; bottom: 24px; right: 24px;
+           background: linear-gradient(135deg,#e91e8c,#e8789a); color: #fff;
+           padding: 12px 22px; border-radius: 12px; font-size: .88rem; font-weight: 500;
+           opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999;
+           box-shadow: 0 4px 16px rgba(233,30,140,.35); }
+  #toast.show { opacity: 1; }
+
+  .profit-positive { color: var(--success-dark); font-weight: 700; }
+  .profit-negative { color: var(--danger-dark); font-weight: 700; }
+
+  /* ── Health Analysis ── */
+  .health-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
+                 box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 22px 24px; }
+  .health-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+  .health-title { font-size: 1rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 8px; }
+  .health-score { display: flex; align-items: center; gap: 10px; }
+  .score-badge { padding: 6px 18px; border-radius: 20px; font-size: .95rem; font-weight: 700; letter-spacing: .02em; }
+  .score-great  { background: #e8f5e9; color: #1b5e20; border: 2px solid #81c784; }
+  .score-good   { background: #fff8e1; color: #e65100; border: 2px solid #ffcc02; }
+  .score-warn   { background: #fff3e0; color: #bf360c; border: 2px solid #ff9800; }
+  .score-bad    { background: #fce4ec; color: #880e4f; border: 2px solid #f48fb1; }
+  .score-crisis { background: #ffebee; color: #b71c1c; border: 2px solid #ef9a9a; }
+  .health-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .metric-box { background: #fff5f8; border-radius: 10px; padding: 12px 14px; border: 1px solid var(--border); }
+  .metric-label { font-size: .72rem; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
+  .metric-val { font-size: 1.05rem; font-weight: 700; }
+  .health-alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+  .alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: .85rem; line-height: 1.45; }
+  .alert-green  { background: #e8f5e9; border-left: 4px solid #4caf50; color: #1b5e20; }
+  .alert-yellow { background: #fffde7; border-left: 4px solid #fdd835; color: #6d4c00; }
+  .alert-orange { background: #fff3e0; border-left: 4px solid #ff9800; color: #bf360c; }
+  .alert-red    { background: #fce4ec; border-left: 4px solid #e91e8c; color: #880e4f; }
+  .alert-item strong { display: block; font-size: .88rem; margin-bottom: 1px; }
+  .health-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-email { background: linear-gradient(135deg,#e91e8c,#e8789a); color: #fff; box-shadow: 0 3px 10px rgba(233,30,140,.3); }
+  .btn-email:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(233,30,140,.4); }
+  .savings-bar-wrap { background: #fce4ec; border-radius: 20px; height: 10px; overflow: hidden; margin-top: 6px; }
+  .savings-bar { height: 100%; border-radius: 20px; transition: width .6s ease; }
+
+  /* ── Floating stickers ── */
+  .float-sticker { position: fixed; pointer-events: none; z-index: 0; opacity: .18; }
+  .float-sticker.fs1 { bottom: 80px; left: 20px; width: 120px; animation: float1 6s ease-in-out infinite; }
+  .float-sticker.fs2 { top: 100px; right: 10px; width: 100px; animation: float1 7s ease-in-out infinite 2s; }
+  @keyframes float1 { 0%,100%{transform:translateY(0) rotate(-6deg)} 50%{transform:translateY(-14px) rotate(4deg)} }
+
+  /* ── Total row ── */
+  .total-row { padding: 12px 20px; font-size: .83rem; color: var(--muted);
+               border-top: 1.5px solid var(--border); background: #fff8fb; font-weight: 500; }
+
+  /* ── Sticker corner decorations on cards ── */
+  .sticker-corner { position: absolute; bottom: -6px; right: 8px; width: 44px; opacity: .55;
+                    pointer-events: none; animation: wobble2 4s ease-in-out infinite; }
+  @keyframes wobble2 { 0%,100%{transform:rotate(6deg) scale(1)} 50%{transform:rotate(-4deg) scale(1.08)} }
+</style>
+</head>
+<body>
+
+<!-- Floating background stickers -->
+<svg class="float-sticker fs1" viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
+  <!-- หมีเนย floating bg -->
+  <ellipse cx="60" cy="95" rx="42" ry="35" fill="#f9c74f"/>
+  <circle cx="38" cy="62" r="16" fill="#f9c74f"/>
+  <circle cx="82" cy="62" r="16" fill="#f9c74f"/>
+  <circle cx="60" cy="78" r="36" fill="#f9c74f"/>
+  <ellipse cx="60" cy="90" rx="22" ry="14" fill="#f4a228" opacity=".4"/>
+  <circle cx="48" cy="72" r="5" fill="#5c2d44"/>
+  <circle cx="72" cy="72" r="5" fill="#5c2d44"/>
+  <ellipse cx="60" cy="84" rx="8" ry="5" fill="#e8789a" opacity=".7"/>
+  <circle cx="50" cy="69" r="1.5" fill="#fff" opacity=".8"/>
+  <circle cx="74" cy="69" r="1.5" fill="#fff" opacity=".8"/>
+  <ellipse cx="44" cy="60" rx="6" ry="5" fill="#f4d03f" opacity=".7"/>
+  <ellipse cx="76" cy="60" rx="6" ry="5" fill="#f4d03f" opacity=".7"/>
+</svg>
+
+<svg class="float-sticker fs2" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- พี่เบียงก้า floating bg -->
+  <circle cx="50" cy="55" r="34" fill="#ffcdd2"/>
+  <ellipse cx="50" cy="42" rx="20" ry="22" fill="#fff9c4"/>
+  <rect x="30" y="18" width="40" height="20" rx="10" fill="#f48fb1"/>
+  <circle cx="26" cy="30" r="8" fill="#f48fb1"/>
+  <circle cx="74" cy="30" r="8" fill="#f48fb1"/>
+  <ellipse cx="36" cy="48" rx="3" ry="2" fill="#f9a8a8" opacity=".8"/>
+  <ellipse cx="64" cy="48" rx="3" ry="2" fill="#f9a8a8" opacity=".8"/>
+  <circle cx="42" cy="44" r="3.5" fill="#5c2d44"/>
+  <circle cx="58" cy="44" r="3.5" fill="#5c2d44"/>
+  <circle cx="43" cy="43" r="1" fill="#fff"/>
+  <circle cx="59" cy="43" r="1" fill="#fff"/>
+  <path d="M44 52 Q50 57 56 52" stroke="#e8789a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="50" cy="75" rx="26" ry="28" fill="#f8bbd0"/>
+  <rect x="35" y="62" width="30" height="22" rx="6" fill="#fff" opacity=".6"/>
+</svg>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <!-- หมีเนยขนาดเล็กบน nav -->
+      <svg class="sticker-nav" viewBox="0 0 60 65" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="28" r="9" fill="#f9c74f"/>
+        <circle cx="40" cy="28" r="9" fill="#f9c74f"/>
+        <circle cx="30" cy="38" r="20" fill="#f9c74f"/>
+        <ellipse cx="30" cy="46" rx="12" ry="7" fill="#f4a228" opacity=".35"/>
+        <circle cx="23" cy="34" r="3.5" fill="#5c2d44"/>
+        <circle cx="37" cy="34" r="3.5" fill="#5c2d44"/>
+        <circle cx="24" cy="33" r="1" fill="#fff"/>
+        <circle cx="38" cy="33" r="1" fill="#fff"/>
+        <ellipse cx="30" cy="43" rx="5" ry="3" fill="#f48fb1" opacity=".8"/>
+        <ellipse cx="20" cy="25" rx="4" ry="3.5" fill="#f4d03f" opacity=".6"/>
+        <ellipse cx="40" cy="25" rx="4" ry="3.5" fill="#f4d03f" opacity=".6"/>
+      </svg>
+      การเงินส่วนบุคคล 🩷
+    </div>
+    <button class="nav-btn active" onclick="showSection('dashboard',this)">🏠 Dashboard</button>
+    <button class="nav-btn" onclick="showSection('income',this)">💰 รายรับ</button>
+    <button class="nav-btn" onclick="showSection('expense',this)">🛒 รายจ่าย</button>
+    <button class="nav-btn" onclick="showSection('invest',this)">📈 เงินลงทุน</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="sec-dashboard" class="section active">
+  <div class="sec-header">
+    <!-- หมีเนย sticker -->
+    <svg class="sec-sticker" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="68" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="50" cy="62" r="34" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <ellipse cx="50" cy="76" rx="20" ry="12" fill="#f4a228" opacity=".3"/>
+      <circle cx="39" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="61" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="41" cy="55" r="2" fill="#fff"/>
+      <circle cx="63" cy="55" r="2" fill="#fff"/>
+      <ellipse cx="50" cy="70" rx="8" ry="5" fill="#f48fb1" opacity=".85"/>
+      <path d="M43 65 Q50 72 57 65" stroke="#c2185b" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="32" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <ellipse cx="68" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <!-- ริบบิ้น -->
+      <ellipse cx="50" cy="28" rx="12" ry="5" fill="#f48fb1" opacity=".7"/>
+      <circle cx="50" cy="28" r="4" fill="#e91e8c" opacity=".8"/>
+    </svg>
+    <!-- พี่เบียงก้า sticker -->
+    <svg class="sec-sticker2" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg">
+      <!-- ผม -->
+      <rect x="22" y="14" width="46" height="28" rx="14" fill="#4a2020"/>
+      <circle cx="22" cy="30" r="10" fill="#4a2020"/>
+      <circle cx="68" cy="30" r="10" fill="#4a2020"/>
+      <!-- หน้า -->
+      <ellipse cx="45" cy="44" rx="22" ry="24" fill="#ffe0b2"/>
+      <!-- แก้ม -->
+      <ellipse cx="29" cy="50" rx="6" ry="4" fill="#f48fb1" opacity=".55"/>
+      <ellipse cx="61" cy="50" rx="6" ry="4" fill="#f48fb1" opacity=".55"/>
+      <!-- ตา -->
+      <circle cx="37" cy="43" r="5" fill="#3d1c28"/>
+      <circle cx="53" cy="43" r="5" fill="#3d1c28"/>
+      <circle cx="38.5" cy="41.5" r="1.8" fill="#fff"/>
+      <circle cx="54.5" cy="41.5" r="1.8" fill="#fff"/>
+      <!-- ขนตา -->
+      <path d="M32 39 Q37 35 42 39" stroke="#3d1c28" stroke-width="1.5" fill="none"/>
+      <path d="M48 39 Q53 35 58 39" stroke="#3d1c28" stroke-width="1.5" fill="none"/>
+      <!-- จมูก -->
+      <ellipse cx="45" cy="51" rx="2.5" ry="1.5" fill="#e8789a"/>
+      <!-- ปาก -->
+      <path d="M39 56 Q45 62 51 56" stroke="#e8789a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- ตัว -->
+      <ellipse cx="45" cy="88" rx="28" ry="22" fill="#f8bbd0"/>
+      <!-- ชุด -->
+      <rect x="28" y="70" width="34" height="26" rx="8" fill="#f48fb1"/>
+      <!-- คอ -->
+      <rect x="38" y="66" width="14" height="10" rx="4" fill="#ffe0b2"/>
+      <!-- โบว์ -->
+      <ellipse cx="30" cy="74" rx="7" ry="4" fill="#e91e8c" opacity=".8" transform="rotate(-20 30 74)"/>
+      <ellipse cx="44" cy="68" rx="7" ry="4" fill="#e91e8c" opacity=".8" transform="rotate(20 44 68)"/>
+      <circle cx="37" cy="71" r="3" fill="#c2185b"/>
+      <!-- มือ -->
+      <circle cx="16" cy="82" r="8" fill="#ffe0b2"/>
+      <circle cx="74" cy="82" r="8" fill="#ffe0b2"/>
+    </svg>
+    <h1>Dashboard การเงิน</h1>
+  </div>
+
+  <div class="month-row">
+    <label>📅 เลือกเดือน</label>
+    <input type="month" id="dashMonth" onchange="renderDashboard()">
+  </div>
+
+  <div class="summary-grid">
+    <div class="card sum-income">
+      <div class="card-icon">💵</div>
+      <div class="card-title">รายรับรวมเดือนนี้</div>
+      <div class="card-value" id="d-income">฿0</div>
+      <div class="card-sub" id="d-income-cnt">0 รายการ</div>
+    </div>
+    <div class="card sum-expense">
+      <div class="card-icon">🛍️</div>
+      <div class="card-title">รายจ่ายรวมเดือนนี้</div>
+      <div class="card-value" id="d-expense">฿0</div>
+      <div class="card-sub" id="d-expense-cnt">0 รายการ</div>
+    </div>
+    <div class="card sum-balance">
+      <div class="card-icon">💳</div>
+      <div class="card-title">เงินคงเหลือ</div>
+      <div class="card-value" id="d-balance">฿0</div>
+      <div class="card-sub">รายรับ - รายจ่าย</div>
+    </div>
+    <div class="card sum-invest">
+      <div class="card-icon">📈</div>
+      <div class="card-title">มูลค่าเงินลงทุนทั้งหมด</div>
+      <div class="card-value" id="d-invest">฿0</div>
+      <div class="card-sub" id="d-invest-cnt">0 รายการ</div>
+    </div>
+  </div>
+
+  <!-- ═ HEALTH ANALYSIS ═ -->
+  <div id="health-section" style="margin-bottom:24px"></div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>🌸 สรุปรายรับ-รายจ่าย 6 เดือนล่าสุด</h3>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>🍩 สัดส่วนค่าใช้จ่ายตามหมวดหมู่</h3>
+      <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INCOME ═══ -->
+<div id="sec-income" class="section">
+  <div class="sec-header">
+    <svg class="sec-sticker" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="68" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="50" cy="62" r="34" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <ellipse cx="50" cy="76" rx="20" ry="12" fill="#f4a228" opacity=".3"/>
+      <circle cx="39" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="61" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="41" cy="55" r="2" fill="#fff"/>
+      <circle cx="63" cy="55" r="2" fill="#fff"/>
+      <path d="M43 65 Q50 74 57 65" stroke="#c2185b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="50" cy="70" rx="8" ry="5" fill="#f48fb1" opacity=".85"/>
+      <ellipse cx="32" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <ellipse cx="68" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <!-- เงิน -->
+      <circle cx="72" cy="26" r="10" fill="#81c784" opacity=".9"/>
+      <text x="72" y="30" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">฿</text>
+    </svg>
+    <h1>บันทึกรายรับ 💵</h1>
+  </div>
+
+  <div class="form-card">
+    <h2>✨ เพิ่มรายรับ</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>📅 วันที่ *</label>
+        <input type="date" id="inc-date">
+      </div>
+      <div class="form-group">
+        <label>📝 รายการ *</label>
+        <input type="text" id="inc-name" placeholder="เช่น เงินเดือนประจำเดือน">
+      </div>
+      <div class="form-group">
+        <label>🗂️ หมวดหมู่ *</label>
+        <select id="inc-cat">
+          <option value="">-- เลือกหมวดหมู่ --</option>
+          <option>เงินเดือน</option>
+          <option>โบนัส</option>
+          <option>รายได้เสริม</option>
+          <option>ดอกเบี้ย</option>
+          <option>เงินปันผล</option>
+          <option>ค่าเช่า</option>
+          <option>อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>💵 จำนวนเงิน (บาท) *</label>
+        <input type="number" id="inc-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group form-full">
+        <label>💬 หมายเหตุ</label>
+        <textarea id="inc-note" placeholder="(ไม่บังคับ)"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveIncome()">🩷 บันทึกรายรับ</button>
+      <button class="btn btn-clear" onclick="clearIncForm()">ล้างข้อมูล</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2>🌸 ประวัติรายรับ</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="month" id="inc-filter-month" class="search-box" style="width:150px" onchange="renderIncomeTable()">
+        <input type="text" id="inc-search" class="search-box" placeholder="🔍 ค้นหา..." oninput="renderIncomeTable()">
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>วันที่</th><th>รายการ</th><th>หมวดหมู่</th><th>จำนวนเงิน</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
+        <tbody id="income-tbody"></tbody>
+      </table>
+    </div>
+    <div id="income-empty" class="empty-state" style="display:none">🐻 ยังไม่มีรายการรายรับ เพิ่มรายการกันเลย!</div>
+    <div class="total-row" id="inc-total-row"></div>
+  </div>
+</div>
+
+<!-- ═══ EXPENSE ═══ -->
+<div id="sec-expense" class="section">
+  <div class="sec-header">
+    <svg class="sec-sticker2" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg">
+      <rect x="22" y="14" width="46" height="28" rx="14" fill="#4a2020"/>
+      <circle cx="22" cy="30" r="10" fill="#4a2020"/>
+      <circle cx="68" cy="30" r="10" fill="#4a2020"/>
+      <ellipse cx="45" cy="44" rx="22" ry="24" fill="#ffe0b2"/>
+      <ellipse cx="29" cy="50" rx="6" ry="4" fill="#f48fb1" opacity=".55"/>
+      <ellipse cx="61" cy="50" rx="6" ry="4" fill="#f48fb1" opacity=".55"/>
+      <circle cx="37" cy="43" r="5" fill="#3d1c28"/>
+      <circle cx="53" cy="43" r="5" fill="#3d1c28"/>
+      <circle cx="38.5" cy="41.5" r="1.8" fill="#fff"/>
+      <circle cx="54.5" cy="41.5" r="1.8" fill="#fff"/>
+      <path d="M32 39 Q37 35 42 39" stroke="#3d1c28" stroke-width="1.5" fill="none"/>
+      <path d="M48 39 Q53 35 58 39" stroke="#3d1c28" stroke-width="1.5" fill="none"/>
+      <ellipse cx="45" cy="51" rx="2.5" ry="1.5" fill="#e8789a"/>
+      <path d="M39 56 Q45 62 51 56" stroke="#e8789a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="45" cy="88" rx="28" ry="22" fill="#f8bbd0"/>
+      <rect x="28" y="70" width="34" height="26" rx="8" fill="#f48fb1"/>
+      <rect x="38" y="66" width="14" height="10" rx="4" fill="#ffe0b2"/>
+      <ellipse cx="30" cy="74" rx="7" ry="4" fill="#e91e8c" opacity=".8" transform="rotate(-20 30 74)"/>
+      <ellipse cx="44" cy="68" rx="7" ry="4" fill="#e91e8c" opacity=".8" transform="rotate(20 44 68)"/>
+      <circle cx="37" cy="71" r="3" fill="#c2185b"/>
+      <circle cx="16" cy="82" r="8" fill="#ffe0b2"/>
+      <circle cx="74" cy="82" r="8" fill="#ffe0b2"/>
+      <!-- ถุงช้อปปิ้ง -->
+      <rect x="60" y="20" width="22" height="18" rx="4" fill="#f48fb1" opacity=".85"/>
+      <path d="M64 20 Q64 14 67 14 Q70 14 70 20" stroke="#c2185b" stroke-width="2" fill="none"/>
+    </svg>
+    <h1>บันทึกรายจ่าย 🛒</h1>
+  </div>
+
+  <div class="form-card">
+    <h2>✨ เพิ่มรายจ่าย</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>📅 วันที่ *</label>
+        <input type="date" id="exp-date">
+      </div>
+      <div class="form-group">
+        <label>📝 รายการ *</label>
+        <input type="text" id="exp-name" placeholder="เช่น ค่าอาหารกลางวัน">
+      </div>
+      <div class="form-group">
+        <label>🗂️ หมวดหมู่ *</label>
+        <select id="exp-cat">
+          <option value="">-- เลือกหมวดหมู่ --</option>
+          <optgroup label="🍱 อาหาร">
+            <option>อาหาร</option>
+            <option>เงินลูกไปโรงเรียน</option>
+          </optgroup>
+          <optgroup label="🚗 ยานพาหนะ">
+            <option>งวดรถยนต์</option>
+            <option>งวดรถมอเตอร์ไซค์</option>
+            <option>เดินทาง</option>
+          </optgroup>
+          <optgroup label="🛍️ ช้อปปิ้งออนไลน์">
+            <option>ช้อปปี้</option>
+            <option>ลาซาด้า</option>
+            <option>ติ๊กตอก</option>
+            <option>ช้อปปิ้งอื่นๆ</option>
+          </optgroup>
+          <optgroup label="💳 บัตรเครดิต">
+            <option>บัตรเครดิตกรุงเทพ</option>
+            <option>บัตรเครดิตกรุงศรี</option>
+            <option>บัตรเครดิตกรุงไทย</option>
+            <option>บัตรเครดิตยูโอบี</option>
+            <option>บัตรเครดิตทหารไทย</option>
+            <option>บัตรเครดิตไทยพาณิชย์</option>
+            <option>บัตรเครดิตอิออน</option>
+          </optgroup>
+          <optgroup label="📚 การศึกษา">
+            <option>ค่าเทอมบีม</option>
+            <option>ค่าเรียนพิเศษ</option>
+            <option>ค่าเรียนพิเศษบีม</option>
+          </optgroup>
+          <optgroup label="🎬 บันเทิง">
+            <option>ยูทูป</option>
+            <option>เน็ตฟลิก</option>
+            <option>วีทีวี</option>
+            <option>อ้ายฉีอี้</option>
+            <option>บันเทิงอื่นๆ</option>
+          </optgroup>
+          <optgroup label="🛡️ ประกัน">
+            <option>ประกันบีม</option>
+            <option>ประกันเอี้ยง</option>
+            <option>ประกันหญิง</option>
+            <option>ประกันอื่นๆ</option>
+          </optgroup>
+          <optgroup label="🏠 บ้านและสาธารณูปโภค">
+            <option>ค่าเช่าบ้าน</option>
+            <option>ค่าน้ำ</option>
+            <option>ค่าไฟ</option>
+            <option>โทรศัพท์</option>
+            <option>อินเทอร์เน็ต</option>
+          </optgroup>
+          <optgroup label="👨‍👩‍👧 ครอบครัว">
+            <option>เงินเดือนพ่อแม่น้อง</option>
+          </optgroup>
+          <optgroup label="❤️ สุขภาพ">
+            <option>สุขภาพ</option>
+          </optgroup>
+          <option>อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>💸 จำนวนเงิน (บาท) *</label>
+        <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group form-full">
+        <label>💬 หมายเหตุ</label>
+        <textarea id="exp-note" placeholder="(ไม่บังคับ)"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveExpense()">🩷 บันทึกรายจ่าย</button>
+      <button class="btn btn-clear" onclick="clearExpForm()">ล้างข้อมูล</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2>🌸 ประวัติรายจ่าย</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="month" id="exp-filter-month" class="search-box" style="width:150px" onchange="renderExpenseTable()">
+        <input type="text" id="exp-search" class="search-box" placeholder="🔍 ค้นหา..." oninput="renderExpenseTable()">
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>วันที่</th><th>รายการ</th><th>หมวดหมู่</th><th>จำนวนเงิน</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
+        <tbody id="expense-tbody"></tbody>
+      </table>
+    </div>
+    <div id="expense-empty" class="empty-state" style="display:none">🐻 ยังไม่มีรายการรายจ่าย เพิ่มรายการกันเลย!</div>
+    <div class="total-row" id="exp-total-row"></div>
+  </div>
+</div>
+
+<!-- ═══ INVEST ═══ -->
+<div id="sec-invest" class="section">
+  <div class="sec-header">
+    <svg class="sec-sticker" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="68" cy="40" r="17" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <circle cx="50" cy="62" r="34" fill="#f9c74f" stroke="#f4a228" stroke-width="1.5"/>
+      <ellipse cx="50" cy="76" rx="20" ry="12" fill="#f4a228" opacity=".3"/>
+      <circle cx="39" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="61" cy="57" r="6" fill="#3d1c28"/>
+      <circle cx="41" cy="55" r="2" fill="#fff"/>
+      <circle cx="63" cy="55" r="2" fill="#fff"/>
+      <path d="M43 67 Q50 75 57 67" stroke="#c2185b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="50" cy="70" rx="8" ry="5" fill="#f48fb1" opacity=".85"/>
+      <ellipse cx="32" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <ellipse cx="68" cy="37" rx="7" ry="6" fill="#f4d03f" opacity=".7"/>
+      <!-- กราฟ -->
+      <circle cx="74" cy="24" r="12" fill="#ce93d8" opacity=".9"/>
+      <polyline points="68,28 72,22 76,24 80,19" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>เงินลงทุน 📈</h1>
+  </div>
+
+  <div class="form-card">
+    <h2>✨ เพิ่มรายการลงทุน</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>📅 วันที่ซื้อ *</label>
+        <input type="date" id="inv-date">
+      </div>
+      <div class="form-group">
+        <label>🏷️ ชื่อสินทรัพย์ *</label>
+        <input type="text" id="inv-name" placeholder="เช่น PTT, SCB Easy, ทองคำแท่ง">
+      </div>
+      <div class="form-group">
+        <label>📊 ประเภท *</label>
+        <select id="inv-type">
+          <option value="">-- เลือกประเภท --</option>
+          <option>หุ้นไทย</option>
+          <option>หุ้นต่างประเทศ</option>
+          <option>กองทุนรวม</option>
+          <option>กองทุน LTF/RMF</option>
+          <option>ทองคำ</option>
+          <option>คริปโทเคอร์เรนซี</option>
+          <option>พันธบัตร</option>
+          <option>เงินฝากประจำ</option>
+          <option>อสังหาริมทรัพย์</option>
+          <option>อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>🔢 จำนวนหน่วย / หุ้น</label>
+        <input type="number" id="inv-qty" placeholder="0" min="0" step="any">
+      </div>
+      <div class="form-group">
+        <label>💵 ราคาต้นทุน/หน่วย (บาท) *</label>
+        <input type="number" id="inv-cost" placeholder="0.00" min="0" step="0.0001">
+      </div>
+      <div class="form-group">
+        <label>💹 ราคาปัจจุบัน/หน่วย (บาท)</label>
+        <input type="number" id="inv-price" placeholder="0.00" min="0" step="0.0001">
+      </div>
+      <div class="form-group form-full">
+        <label>💬 หมายเหตุ</label>
+        <textarea id="inv-note" placeholder="(ไม่บังคับ)"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveInvest()">🩷 บันทึกการลงทุน</button>
+      <button class="btn btn-clear" onclick="clearInvForm()">ล้างข้อมูล</button>
+    </div>
+  </div>
+
+  <div class="invest-summary" id="inv-summary-cards"></div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2>🌸 พอร์ตการลงทุน</h2>
+      <input type="text" id="inv-search" class="search-box" placeholder="🔍 ค้นหา..." oninput="renderInvestTable()">
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>วันที่ซื้อ</th><th>ชื่อสินทรัพย์</th><th>ประเภท</th><th>จำนวน</th><th>ต้นทุน/หน่วย</th><th>ราคาปัจจุบัน/หน่วย</th><th>มูลค่ารวม</th><th>กำไร/ขาดทุน</th><th>อัปเดต</th><th>ลบ</th></tr></thead>
+        <tbody id="invest-tbody"></tbody>
+      </table>
+    </div>
+    <div id="invest-empty" class="empty-state" style="display:none">🐻 ยังไม่มีรายการลงทุน เริ่มลงทุนกันเลย!</div>
+    <div class="total-row" id="inv-total-row"></div>
+  </div>
+</div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const DB = { get: k => JSON.parse(localStorage.getItem(k)||'[]'), set: (k,v) => localStorage.setItem(k,JSON.stringify(v)) };
+const INCOME_KEY='pf_income', EXPENSE_KEY='pf_expense', INVEST_KEY='pf_invest';
+const fmt = n => '฿'+Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const today = () => new Date().toISOString().slice(0,10);
+const thisMonth = () => new Date().toISOString().slice(0,7);
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name==='dashboard') renderDashboard();
+  if (name==='income') renderIncomeTable();
+  if (name==='expense') renderExpenseTable();
+  if (name==='invest') renderInvestTable();
+}
+
+// ── INCOME ──
+function saveIncome() {
+  const date=document.getElementById('inc-date').value, name=document.getElementById('inc-name').value.trim(),
+        cat=document.getElementById('inc-cat').value, amount=parseFloat(document.getElementById('inc-amount').value),
+        note=document.getElementById('inc-note').value.trim();
+  if (!date||!name||!cat||isNaN(amount)||amount<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
+  const arr=DB.get(INCOME_KEY); arr.push({id:uid(),date,name,cat,amount,note}); DB.set(INCOME_KEY,arr);
+  toast('🩷 บันทึกรายรับเรียบร้อยแล้วค่ะ'); clearIncForm(); renderIncomeTable();
+}
+function clearIncForm() {
+  ['inc-name','inc-amount','inc-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inc-cat').value=''; document.getElementById('inc-date').value=today();
+}
+function deleteIncome(id) {
+  if (!confirm('ลบรายการนี้นะคะ?')) return;
+  DB.set(INCOME_KEY,DB.get(INCOME_KEY).filter(r=>r.id!==id)); renderIncomeTable(); toast('🗑️ ลบรายการแล้ว');
+}
+function renderIncomeTable() {
+  const month=document.getElementById('inc-filter-month').value, search=document.getElementById('inc-search').value.toLowerCase();
+  let data=DB.get(INCOME_KEY);
+  if (month) data=data.filter(r=>r.date.startsWith(month));
+  if (search) data=data.filter(r=>r.name.toLowerCase().includes(search)||r.cat.toLowerCase().includes(search));
+  data.sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody=document.getElementById('income-tbody'), empty=document.getElementById('income-empty');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display=''; document.getElementById('inc-total-row').textContent=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.name}</td>
+    <td><span class="badge badge-income">${r.cat}</span></td>
+    <td class="amount-income">${fmt(r.amount)}</td>
+    <td style="color:var(--muted);font-size:.8rem">${r.note||'-'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteIncome('${r.id}')">ลบ</button></td>
+  </tr>`).join('');
+  const total=data.reduce((s,r)=>s+r.amount,0);
+  document.getElementById('inc-total-row').textContent=`🩷 รวม ${data.length} รายการ | รายรับรวม: ${fmt(total)}`;
+}
+
+// ── EXPENSE ──
+function saveExpense() {
+  const date=document.getElementById('exp-date').value, name=document.getElementById('exp-name').value.trim(),
+        cat=document.getElementById('exp-cat').value, amount=parseFloat(document.getElementById('exp-amount').value),
+        note=document.getElementById('exp-note').value.trim();
+  if (!date||!name||!cat||isNaN(amount)||amount<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
+  const arr=DB.get(EXPENSE_KEY); arr.push({id:uid(),date,name,cat,amount,note}); DB.set(EXPENSE_KEY,arr);
+  toast('🩷 บันทึกรายจ่ายเรียบร้อยแล้วค่ะ'); clearExpForm(); renderExpenseTable();
+}
+function clearExpForm() {
+  ['exp-name','exp-amount','exp-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('exp-cat').value=''; document.getElementById('exp-date').value=today();
+}
+function deleteExpense(id) {
+  if (!confirm('ลบรายการนี้นะคะ?')) return;
+  DB.set(EXPENSE_KEY,DB.get(EXPENSE_KEY).filter(r=>r.id!==id)); renderExpenseTable(); toast('🗑️ ลบรายการแล้ว');
+}
+function renderExpenseTable() {
+  const month=document.getElementById('exp-filter-month').value, search=document.getElementById('exp-search').value.toLowerCase();
+  let data=DB.get(EXPENSE_KEY);
+  if (month) data=data.filter(r=>r.date.startsWith(month));
+  if (search) data=data.filter(r=>r.name.toLowerCase().includes(search)||r.cat.toLowerCase().includes(search));
+  data.sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody=document.getElementById('expense-tbody'), empty=document.getElementById('expense-empty');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display=''; document.getElementById('exp-total-row').textContent=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.name}</td>
+    <td><span class="badge badge-expense">${r.cat}</span></td>
+    <td class="amount-expense">${fmt(r.amount)}</td>
+    <td style="color:var(--muted);font-size:.8rem">${r.note||'-'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${r.id}')">ลบ</button></td>
+  </tr>`).join('');
+  const total=data.reduce((s,r)=>s+r.amount,0);
+  document.getElementById('exp-total-row').textContent=`🛍️ รวม ${data.length} รายการ | รายจ่ายรวม: ${fmt(total)}`;
+}
+
+// ── INVEST ──
+function saveInvest() {
+  const date=document.getElementById('inv-date').value, name=document.getElementById('inv-name').value.trim(),
+        type=document.getElementById('inv-type').value, qty=parseFloat(document.getElementById('inv-qty').value)||1,
+        cost=parseFloat(document.getElementById('inv-cost').value), price=parseFloat(document.getElementById('inv-price').value)||cost,
+        note=document.getElementById('inv-note').value.trim();
+  if (!date||!name||!type||isNaN(cost)||cost<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
+  const arr=DB.get(INVEST_KEY); arr.push({id:uid(),date,name,type,qty,cost,price,note}); DB.set(INVEST_KEY,arr);
+  toast('🩷 บันทึกการลงทุนเรียบร้อยแล้วค่ะ'); clearInvForm(); renderInvestTable();
+}
+function clearInvForm() {
+  ['inv-name','inv-qty','inv-cost','inv-price','inv-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inv-type').value=''; document.getElementById('inv-date').value=today();
+}
+function deleteInvest(id) {
+  if (!confirm('ลบรายการนี้นะคะ?')) return;
+  DB.set(INVEST_KEY,DB.get(INVEST_KEY).filter(r=>r.id!==id)); renderInvestTable(); toast('🗑️ ลบรายการแล้ว');
+}
+function updateInvestPrice(id) {
+  const priceStr=prompt('กรอกราคาปัจจุบัน/หน่วย (บาท):'); if (priceStr===null) return;
+  const price=parseFloat(priceStr); if (isNaN(price)||price<0) { toast('ราคาไม่ถูกต้อง'); return; }
+  const arr=DB.get(INVEST_KEY), idx=arr.findIndex(r=>r.id===id);
+  if (idx>=0) { arr[idx].price=price; DB.set(INVEST_KEY,arr); }
+  renderInvestTable(); toast('💹 อัปเดตราคาแล้วค่ะ');
+}
+function renderInvestTable() {
+  const search=document.getElementById('inv-search').value.toLowerCase();
+  let data=DB.get(INVEST_KEY);
+  if (search) data=data.filter(r=>r.name.toLowerCase().includes(search)||r.type.toLowerCase().includes(search));
+  data.sort((a,b)=>b.date.localeCompare(a.date));
+  const allData=DB.get(INVEST_KEY);
+  const totalCost=allData.reduce((s,r)=>s+r.qty*r.cost,0);
+  const totalVal=allData.reduce((s,r)=>s+r.qty*r.price,0);
+  const totalPnl=totalVal-totalCost;
+  const pnlPct=totalCost>0?(totalPnl/totalCost*100):0;
+  document.getElementById('inv-summary-cards').innerHTML=`
+    <div class="invest-mini-card"><div class="label">💹 มูลค่ารวมปัจจุบัน</div><div class="val">${fmt(totalVal)}</div></div>
+    <div class="invest-mini-card"><div class="label">💵 ต้นทุนรวม</div><div class="val" style="color:var(--text)">${fmt(totalCost)}</div></div>
+    <div class="invest-mini-card"><div class="label">📊 กำไร/ขาดทุนรวม</div><div class="val ${totalPnl>=0?'profit-positive':'profit-negative'}">${totalPnl>=0?'+':''}${fmt(totalPnl)} (${pnlPct.toFixed(2)}%)</div></div>
+    <div class="invest-mini-card"><div class="label">🏷️ จำนวนสินทรัพย์</div><div class="val" style="color:var(--text)">${allData.length} รายการ</div></div>`;
+  const tbody=document.getElementById('invest-tbody'), empty=document.getElementById('invest-empty');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display=''; document.getElementById('inv-total-row').textContent=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(r=>{
+    const ct=r.qty*r.cost, vt=r.qty*r.price, pnl=vt-ct, pct=ct>0?(pnl/ct*100):0;
+    return `<tr>
+      <td>${r.date}</td>
+      <td><strong>${r.name}</strong>${r.note?'<br><span style="font-size:.76rem;color:var(--muted)">'+r.note+'</span>':''}</td>
+      <td><span class="badge badge-invest">${r.type}</span></td>
+      <td>${r.qty.toLocaleString()}</td>
+      <td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td>
+      <td class="amount-invest">${fmt(vt)}</td>
+      <td class="${pnl>=0?'profit-positive':'profit-negative'}">${pnl>=0?'+':''}${fmt(pnl)}<br><span style="font-size:.76rem">(${pct.toFixed(2)}%)</span></td>
+      <td><button class="btn btn-sm" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #ce93d8" onclick="updateInvestPrice('${r.id}')">💹 อัปเดต</button></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteInvest('${r.id}')">ลบ</button></td>
+    </tr>`;
+  }).join('');
+  const fv=data.reduce((s,r)=>s+r.qty*r.price,0);
+  document.getElementById('inv-total-row').textContent=`📈 แสดง ${data.length} รายการ | มูลค่ารวม: ${fmt(fv)}`;
+}
+
+// ── DASHBOARD ──
+let barChartInst, pieChartInst;
+function renderDashboard() {
+  const month=document.getElementById('dashMonth').value||thisMonth();
+  document.getElementById('dashMonth').value=month;
+  const incomes=DB.get(INCOME_KEY).filter(r=>r.date.startsWith(month));
+  const expenses=DB.get(EXPENSE_KEY).filter(r=>r.date.startsWith(month));
+  const invests=DB.get(INVEST_KEY);
+  const ti=incomes.reduce((s,r)=>s+r.amount,0), te=expenses.reduce((s,r)=>s+r.amount,0);
+  const tv=invests.reduce((s,r)=>s+r.qty*r.price,0);
+  document.getElementById('d-income').textContent=fmt(ti);
+  document.getElementById('d-income-cnt').textContent=incomes.length+' รายการ';
+  document.getElementById('d-expense').textContent=fmt(te);
+  document.getElementById('d-expense-cnt').textContent=expenses.length+' รายการ';
+  const bal=document.getElementById('d-balance');
+  bal.textContent=fmt(ti-te);
+  bal.style.color=(ti-te)>=0?'var(--success-dark)':'var(--danger-dark)';
+  document.getElementById('d-invest').textContent=fmt(tv);
+  document.getElementById('d-invest-cnt').textContent=invests.length+' รายการ';
+  analyzeHealth(month, ti, te, tv, expenses);
+  renderBarChart(month); renderPieChart(month);
+}
+
+// ── HEALTH ANALYSIS ──
+function analyzeHealth(month, ti, te, tv, expenses) {
+  const el = document.getElementById('health-section');
+  const balance = ti - te;
+  const savingsRate = ti > 0 ? (balance / ti * 100) : (te > 0 ? -100 : 0);
+
+  // Category totals
+  const catMap = {};
+  expenses.forEach(r => { catMap[r.cat] = (catMap[r.cat]||0) + r.amount; });
+  const topCats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  // Debt categories
+  const debtCats = ['งวดรถยนต์','งวดรถมอเตอร์ไซค์','บัตรเครดิตกรุงเทพ','บัตรเครดิตกรุงศรี','บัตรเครดิตกรุงไทย','บัตรเครดิตยูโอบี','บัตรเครดิตทหารไทย','บัตรเครดิตไทยพาณิชย์','บัตรเครดิตอิออน'];
+  const shopCats = ['ช้อปปี้','ลาซาด้า','ติ๊กตอก','ช้อปปิ้งอื่นๆ'];
+  const entCats  = ['ยูทูป','เน็ตฟลิก','วีทีวี','อ้ายฉีอี้','บันเทิงอื่นๆ'];
+  const debtTotal = expenses.filter(r=>debtCats.includes(r.cat)).reduce((s,r)=>s+r.amount,0);
+  const shopTotal = expenses.filter(r=>shopCats.includes(r.cat)).reduce((s,r)=>s+r.amount,0);
+  const entTotal  = expenses.filter(r=>entCats.includes(r.cat)).reduce((s,r)=>s+r.amount,0);
+  const debtRatio = ti > 0 ? debtTotal/ti*100 : 0;
+  const shopRatio = ti > 0 ? shopTotal/ti*100 : 0;
+
+  // Score
+  let scoreClass, scoreLabel, scoreEmoji;
+  if (ti === 0 && te === 0) {
+    el.innerHTML=''; return;
+  } else if (savingsRate >= 30) {
+    scoreClass='score-great'; scoreLabel='ดีมาก'; scoreEmoji='🌟';
+  } else if (savingsRate >= 15) {
+    scoreClass='score-good'; scoreLabel='ดี'; scoreEmoji='😊';
+  } else if (savingsRate >= 5) {
+    scoreClass='score-warn'; scoreLabel='ควรปรับปรุง'; scoreEmoji='😐';
+  } else if (savingsRate >= 0) {
+    scoreClass='score-bad'; scoreLabel='น่าเป็นห่วง'; scoreEmoji='😟';
+  } else {
+    scoreClass='score-crisis'; scoreLabel='วิกฤต!'; scoreEmoji='🚨';
+  }
+
+  // Alerts
+  const alerts = [];
+  if (savingsRate >= 30) alerts.push({cls:'alert-green', icon:'🌟', title:'ออมเงินได้ดีมาก!', msg:`อัตราการออม ${savingsRate.toFixed(1)}% สูงกว่าเป้าหมาย 30% เยี่ยมมากค่ะ คงรักษาวินัยนี้ต่อไปนะคะ`});
+  else if (savingsRate >= 15) alerts.push({cls:'alert-green', icon:'😊', title:'อัตราการออมอยู่ในเกณฑ์ดี', msg:`ออมได้ ${savingsRate.toFixed(1)}% พยายามเพิ่มเป็น 30% จะดีมากค่ะ`});
+  else if (savingsRate >= 5) alerts.push({cls:'alert-yellow', icon:'⚠️', title:'อัตราการออมค่อนข้างต่ำ', msg:`ออมได้เพียง ${savingsRate.toFixed(1)}% ควรหาทางลดค่าใช้จ่ายหรือเพิ่มรายได้ค่ะ`});
+  else if (savingsRate >= 0) alerts.push({cls:'alert-orange', icon:'🔔', title:'ออมเงินได้น้อยมาก — ควรตรวจสอบด่วน!', msg:`เหลือเงินออมเพียง ${savingsRate.toFixed(1)}% แนะนำให้ตัดค่าใช้จ่ายที่ไม่จำเป็นออกทันทีค่ะ`});
+  else alerts.push({cls:'alert-red', icon:'🚨', title:'รายจ่ายเกินรายรับ — สถานะวิกฤต!', msg:`รายจ่ายมากกว่ารายรับ ${fmt(Math.abs(balance))} ต้องหาทางเพิ่มรายได้และลดรายจ่ายโดยเร่งด่วนค่ะ`});
+
+  if (debtRatio > 50) alerts.push({cls:'alert-red', icon:'💳', title:'ภาระหนี้สูงเกินไป!', msg:`หนี้รวม ${fmt(debtTotal)} คิดเป็น ${debtRatio.toFixed(1)}% ของรายได้ — เกินกว่า 50% ถือว่าอันตราย ควรหยุดก่อหนี้เพิ่มค่ะ`});
+  else if (debtRatio > 35) alerts.push({cls:'alert-orange', icon:'💳', title:'ภาระหนี้ค่อนข้างสูง', msg:`หนี้ ${debtRatio.toFixed(1)}% ของรายได้ พยายามอย่าให้เกิน 35% นะคะ`});
+
+  if (shopRatio > 20) alerts.push({cls:'alert-orange', icon:'🛍️', title:'ค่าช้อปปิ้งออนไลน์สูง', msg:`ใช้ไป ${fmt(shopTotal)} (${shopRatio.toFixed(1)}% ของรายได้) ลองวางแผนก่อนซื้อสินค้าออนไลน์นะคะ`});
+
+  if (tv > 0 && tv >= ti * 3) alerts.push({cls:'alert-green', icon:'📈', title:'พอร์ตการลงทุนเติบโตดี!', msg:`มูลค่าลงทุนรวม ${fmt(tv)} — มีเงินสำรองในอนาคตแล้วค่ะ`});
+  else if (tv === 0) alerts.push({cls:'alert-yellow', icon:'💡', title:'ยังไม่มีเงินลงทุน', msg:`ลองเริ่มออมเพื่อลงทุนสักเดือนละ 10% ของรายได้นะคะ จะช่วยสร้างความมั่งคั่งระยะยาวได้ค่ะ`});
+
+  // Income boost recommendation
+  const mNum = parseInt(month.split('-')[1]);
+  const boostMonths = {
+    1:'มกราคม — ช่วงโบนัสปีใหม่ เหมาะหาเงินเพิ่มจากงานพิเศษหรือขายของออนไลน์ค่ะ',
+    3:'มีนาคม — ช่วงใกล้สงกรานต์ เหมาะขายสินค้าและรับงานฟรีแลนซ์ค่ะ',
+    4:'เมษายน — สงกรานต์! โอกาสดีหารายได้พิเศษจากการขายสินค้า/บริการค่ะ',
+    10:'ตุลาคม — ใกล้ปลายปี เหมาะเตรียมแผนรับโบนัสและเพิ่มการออมค่ะ',
+    11:'พฤศจิกายน — ช้อปปิ้งออนไลน์บูม เหมาะรับงานขายหรือฟรีแลนซ์ค่ะ',
+    12:'ธันวาคม — ช่วงโบนัสปลายปี ควรวางแผนออมทันทีที่ได้รับค่ะ',
+  };
+  if (boostMonths[mNum]) alerts.push({cls:'alert-green', icon:'💡', title:'ช่วงแนะนำหารายได้เพิ่ม', msg:boostMonths[mNum]});
+
+  const savBarColor = savingsRate>=30?'#4caf50':savingsRate>=15?'#fdd835':savingsRate>=5?'#ff9800':savingsRate>=0?'#f48fb1':'#e53935';
+  const savBarW = Math.max(0, Math.min(100, savingsRate));
+
+  const topCatHTML = topCats.length ? topCats.map(([cat,amt])=>`<span style="background:#fce4ec;color:#ad1457;padding:2px 9px;border-radius:12px;font-size:.78rem;font-weight:600">${cat} ${fmt(amt)}</span>`).join(' ') : '<span style="color:var(--muted);font-size:.82rem">ยังไม่มีข้อมูล</span>';
+
+  el.innerHTML = `
+  <div class="health-card">
+    <div class="health-top">
+      <div class="health-title">🩺 วิเคราะห์สุขภาพการเงิน — ${getMonthLabel(month)}</div>
+      <div class="health-score">
+        <span class="score-badge ${scoreClass}">${scoreEmoji} ${scoreLabel}</span>
+        <button class="btn btn-email btn-sm" onclick="sendEmailReport('${month}')">📧 ส่งรายงานทาง Email</button>
+      </div>
+    </div>
+    <div class="health-metrics">
+      <div class="metric-box">
+        <div class="metric-label">💰 อัตราการออม</div>
+        <div class="metric-val" style="color:${savBarColor}">${savingsRate.toFixed(1)}%</div>
+        <div class="savings-bar-wrap"><div class="savings-bar" style="width:${savBarW}%;background:${savBarColor}"></div></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">💳 ภาระหนี้/รายได้</div>
+        <div class="metric-val" style="color:${debtRatio>50?'#b71c1c':debtRatio>35?'#e65100':'var(--success-dark)'}">${debtRatio.toFixed(1)}%</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:3px">เป้าหมาย &lt; 35%</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">🛍️ ช้อปปิ้งออนไลน์</div>
+        <div class="metric-val" style="color:${shopRatio>20?'#bf360c':'var(--text)'}">${fmt(shopTotal)}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:3px">${shopRatio.toFixed(1)}% ของรายได้</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">🎬 บันเทิง/Streaming</div>
+        <div class="metric-val">${fmt(entTotal)}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:3px">${ti>0?(entTotal/ti*100).toFixed(1):0}% ของรายได้</div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">🏆 ค่าใช้จ่ายสูงสุด 3 อันดับ</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${topCatHTML}</div>
+    </div>
+    <div class="health-alerts">${alerts.map(a=>`<div class="alert-item ${a.cls}"><span style="font-size:1.1rem">${a.icon}</span><div><strong>${a.title}</strong>${a.msg}</div></div>`).join('')}</div>
+  </div>`;
+}
+
+function sendEmailReport(month) {
+  const incomes  = DB.get(INCOME_KEY).filter(r=>r.date.startsWith(month));
+  const expenses = DB.get(EXPENSE_KEY).filter(r=>r.date.startsWith(month));
+  const invests  = DB.get(INVEST_KEY);
+  const ti = incomes.reduce((s,r)=>s+r.amount,0);
+  const te = expenses.reduce((s,r)=>s+r.amount,0);
+  const tv = invests.reduce((s,r)=>s+r.qty*r.price,0);
+  const bal = ti - te;
+  const sr  = ti>0?(bal/ti*100):0;
+
+  const catMap={};
+  expenses.forEach(r=>{catMap[r.cat]=(catMap[r.cat]||0)+r.amount;});
+  const topCats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  let status = sr>=30?'ดีมาก 🌟':sr>=15?'ดี 😊':sr>=5?'ควรปรับปรุง ⚠️':sr>=0?'น่าเป็นห่วง 😟':'วิกฤต 🚨';
+  const mLabel = getMonthLabel(month);
+
+  const body = `รายงานสุขภาพการเงินประจำเดือน ${mLabel}
+
+สถานะ: ${status}
+
+========== สรุปการเงิน ==========
+รายรับรวม    : ${fmt(ti)}
+รายจ่ายรวม  : ${fmt(te)}
+เงินคงเหลือ  : ${fmt(bal)}
+อัตราการออม : ${sr.toFixed(1)}%
+มูลค่าลงทุน : ${fmt(tv)}
+
+========== ค่าใช้จ่ายสูงสุด ==========
+${topCats.map(([c,a],i)=>`${i+1}. ${c}: ${fmt(a)}`).join('\n')}
+
+========== คำแนะนำ ==========
+${sr>=30?'✅ สุดยอด! รักษาวินัยการออมแบบนี้ต่อไป':sr>=15?'😊 ดีแล้ว พยายามเพิ่มอัตราออมเป็น 30%':sr>=0?'⚠️ ควรลดค่าใช้จ่ายที่ไม่จำเป็นลง':'🚨 รายจ่ายเกินรายรับ — ต้องหาทางเพิ่มรายได้ด่วน!'}
+
+ส่งจากแอปบริหารการเงินส่วนบุคคล 🐻🩷`;
+
+  const subject = encodeURIComponent(`รายงานการเงินประจำเดือน ${mLabel} — สถานะ: ${status}`);
+  const bodyEnc = encodeURIComponent(body);
+  window.location.href = `mailto:sudaratnooying3636@gmail.com?subject=${subject}&body=${bodyEnc}`;
+}
+function getMonthLabel(ym) {
+  const [y,m]=ym.split('-');
+  const th=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return th[parseInt(m)-1]+' '+(parseInt(y)+543).toString().slice(2);
+}
+function getLast6Months(cur) {
+  const months=[], [y,m]=cur.split('-').map(Number);
+  for (let i=5;i>=0;i--) { let mm=m-i,yy=y; while(mm<=0){mm+=12;yy--;} months.push(`${yy}-${String(mm).padStart(2,'0')}`); }
+  return months;
+}
+function renderBarChart(current) {
+  const months=getLast6Months(current), ai=DB.get(INCOME_KEY), ae=DB.get(EXPENSE_KEY);
+  const incData=months.map(m=>ai.filter(r=>r.date.startsWith(m)).reduce((s,r)=>s+r.amount,0));
+  const expData=months.map(m=>ae.filter(r=>r.date.startsWith(m)).reduce((s,r)=>s+r.amount,0));
+  if (barChartInst) barChartInst.destroy();
+  barChartInst=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{ labels:months.map(getMonthLabel), datasets:[
+      {label:'รายรับ',data:incData,backgroundColor:'#a8d8b9',borderRadius:8,borderSkipped:false},
+      {label:'รายจ่าย',data:expData,backgroundColor:'#f9a8c9',borderRadius:8,borderSkipped:false}]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Prompt'}}}},
+      scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString(),font:{family:'Prompt'}},grid:{color:'#fce4ec'}},
+               x:{grid:{display:false},ticks:{font:{family:'Prompt'}}}}}
+  });
+}
+function renderPieChart(month) {
+  const expenses=DB.get(EXPENSE_KEY).filter(r=>r.date.startsWith(month));
+  const catMap={}; expenses.forEach(r=>{catMap[r.cat]=(catMap[r.cat]||0)+r.amount;});
+  const labels=Object.keys(catMap), data=Object.values(catMap);
+  const colors=['#f48fb1','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#90caf9','#a5d6a7','#fff176','#bcaaa4','#b0bec5','#f8bbd0','#e1bee7','#b3e5fc','#dcedc8'];
+  if (pieChartInst) pieChartInst.destroy();
+  if (!labels.length) return;
+  pieChartInst=new Chart(document.getElementById('pieChart'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:2,borderColor:'#fff5f8'}]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Prompt',size:11}}},
+               tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}
+  });
+}
+
+// ── Init ──
+document.getElementById('inc-date').value=today();
+document.getElementById('exp-date').value=today();
+document.getElementById('inv-date').value=today();
+document.getElementById('dashMonth').value=thisMonth();
+document.getElementById('inc-filter-month').value=thisMonth();
+document.getElementById('exp-filter-month').value=thisMonth();
+renderDashboard();
+</script>
+</body>
+</html>

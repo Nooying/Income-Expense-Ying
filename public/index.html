@@ -1802,6 +1802,10 @@ function Layout({user,onLogout}){
             <div style={{fontWeight:700,fontSize:13}}>{user.name}</div>
             <span className={`badge ${ROLE_COLOR[user.role]}`} style={{fontSize:11,marginTop:4,display:'inline-flex'}}>{ROLE_LABEL[user.role]}</span>
           </div>}
+          {!collapsed&&<button onClick={exportAllData} style={{display:'flex',alignItems:'center',gap:8,background:'rgba(139,92,246,.25)',border:'1px solid rgba(139,92,246,.5)',color:'#e9d5ff',cursor:'pointer',fontSize:12,borderRadius:8,padding:'6px 10px',marginBottom:8,width:'100%'}}
+            onMouseOver={e=>e.currentTarget.style.background='rgba(139,92,246,.45)'} onMouseOut={e=>e.currentTarget.style.background='rgba(139,92,246,.25)'}>
+            <span>📦</span><span>ส่งออกข้อมูลทั้งหมด</span>
+          </button>}
           <button onClick={onLogout} style={{display:'flex',alignItems:'center',gap:8,background:'none',border:'none',color:'#c4b5fd',cursor:'pointer',fontSize:13}}
             onMouseOver={e=>e.currentTarget.style.color='#fff'} onMouseOut={e=>e.currentTarget.style.color='#c4b5fd'}>
             <span>🚪</span>{!collapsed&&'ออกจากระบบ'}
@@ -1813,6 +1817,73 @@ function Layout({user,onLogout}){
       </main>
     </div>
   );
+}
+
+/* ====== EXPORT ALL DATA (Share to Friend) ====== */
+function exportAllData(){
+  // Collect all localStorage keys used by this app
+  const KEYS=['rev_budgets','exp_budgets','actual_records','loan_records','daily_cashflow','cf_opening_year'];
+  const snapshot={};
+  KEYS.forEach(k=>{
+    const v=localStorage.getItem(k);
+    if(v)snapshot[k]=v; // keep as raw JSON string
+  });
+  if(Object.keys(snapshot).length===0){
+    alert('ยังไม่มีข้อมูลในระบบ กรุณากรอกข้อมูลก่อนส่งออกครับ');
+    return;
+  }
+
+  // Embed snapshot into a self-loading HTML page
+  const dataJSON=JSON.stringify(snapshot).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
+  const appUrl=window.location.href;
+  const html=`<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<title>Budget Data — โหลดข้อมูลอัตโนมัติ</title>
+<style>
+  body{font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(135deg,#2e1065,#4c1d95,#6d28d9)}
+  .box{background:#fff;border-radius:16px;padding:40px 48px;text-align:center;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  h2{color:#4c1d95;font-size:22px;margin-bottom:8px}
+  p{color:#64748b;font-size:14px;margin-bottom:24px;line-height:1.6}
+  .btn{background:#7c3aed;color:#fff;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+  .btn:hover{background:#6d28d9}
+  .note{margin-top:16px;font-size:12px;color:#94a3b8}
+  .ok{color:#16a34a;font-size:32px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ok">📦</div>
+  <h2>ข้อมูลงบประมาณ</h2>
+  <p>ไฟล์นี้มีข้อมูลทั้งหมดจากระบบ Budget Planning<br/>กดปุ่มด้านล่างเพื่อโหลดข้อมูลและเปิดแอป</p>
+  <button class="btn" onclick="loadAndOpen()">📂 โหลดข้อมูลและเปิดแอป</button>
+  <div class="note">หลังกดปุ่ม เบราว์เซอร์จะเปิดแอปพร้อมข้อมูลครบถ้วน</div>
+</div>
+<script>
+const SNAPSHOT=${dataJSON};
+const APP_URL="${appUrl}";
+function loadAndOpen(){
+  try{
+    Object.entries(SNAPSHOT).forEach(([k,v])=>localStorage.setItem(k,v));
+    alert('✅ โหลดข้อมูลสำเร็จ! กำลังเปิดแอป...');
+    window.location.href=APP_URL;
+  }catch(e){
+    alert('เกิดข้อผิดพลาด: '+e.message);
+  }
+}
+</script>
+</body>
+</html>`;
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const d=new Date();
+  const fname=`budget_share_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.html`;
+  a.download=fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /* ====== APP ====== */

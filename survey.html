@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แบบสอบถาม</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: #2c2200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .topbar .brand { font-size: 1rem; font-weight: 700; color: #f6c90e; }
+    .topbar a {
+      display: flex; align-items: center; gap: 7px;
+      color: #2c2200; background: #f6c90e;
+      text-decoration: none; font-size: 0.85rem; font-weight: 700;
+      padding: 7px 16px; border-radius: 7px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .topbar a:hover { background: #ffd93d; transform: translateY(-1px); }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #fffde7 0%, #fff8c5 50%, #ffeea0 100%);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 70px 16px 40px;
+      gap: 20px;
+    }
+
+    /* ─── Tree Banner ─── */
+    .tree-banner {
+      width: 100%; max-width: 520px;
+      background: rgba(255,255,255,0.82);
+      border-radius: 18px;
+      border: 1.8px solid #f0d060;
+      box-shadow: 0 4px 20px rgba(246,201,14,0.15);
+      padding: 20px 24px;
+      display: flex; align-items: center; gap: 20px;
+      backdrop-filter: blur(8px);
+    }
+    .tree-svg-wrap { flex-shrink: 0; }
+    .tree-info { flex: 1; }
+    .tree-count { font-size: 2.4rem; font-weight: 800; color: #2c2200; line-height: 1; }
+    .tree-count span { font-size: 1rem; font-weight: 600; color: #8a7500; }
+    .tree-label { font-size: 0.85rem; color: #8a7500; margin: 4px 0 10px; }
+    .progress-wrap { background: #f0d060; border-radius: 99px; height: 10px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, #f6c90e, #ffd93d);
+      transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .progress-goal { font-size: 0.75rem; color: #a08000; margin-top: 5px; }
+
+    /* ─── Card ─── */
+    .card {
+      width: 100%; max-width: 520px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(246,201,14,0.18), 0 2px 8px rgba(0,0,0,0.07);
+      padding: 36px 36px 32px;
+      border-top: 5px solid #f6c90e;
+    }
+    .card-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #f6c90e, #ffd93d);
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(246,201,14,0.35);
+    }
+    h1 { font-size: 1.5rem; color: #2c2200; margin-bottom: 4px; }
+    .subtitle { color: #8a7500; font-size: 0.92rem; margin-bottom: 24px; }
+    .divider { height: 2px; background: linear-gradient(to right, #f6c90e, transparent); border-radius: 2px; margin-bottom: 22px; }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 0.87rem; font-weight: 700; color: #4a3800; margin-bottom: 7px; }
+    label span.req { color: #e53e3e; margin-left: 2px; }
+    .input-wrap { position: relative; }
+    .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; pointer-events: none; }
+    input[type=text], input[type=email], input[type=tel] {
+      width: 100%; padding: 11px 14px 11px 38px;
+      border: 1.8px solid #f0d060; border-radius: 10px;
+      font-size: 0.95rem; color: #2c2200; background: #fffdf0;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { border-color: #f6c90e; box-shadow: 0 0 0 3px rgba(246,201,14,0.2); background: #fff; }
+    input.error { border-color: #e53e3e; }
+    .error-msg { color: #e53e3e; font-size: 0.8rem; margin-top: 4px; display: none; }
+    .error-msg.show { display: block; }
+
+    /* ─── Food Grid ─── */
+    .food-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-top: 6px;
+    }
+    .food-option input[type=radio] { display: none; }
+    .food-option label {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 10px 4px 8px;
+      border: 1.8px solid #f0d060; border-radius: 10px;
+      cursor: pointer; background: #fffdf0;
+      font-size: 0.75rem; color: #4a3800;
+      transition: all 0.15s; text-align: center;
+    }
+    .food-option label .emoji { font-size: 1.5rem; }
+    .food-option input:checked + label {
+      background: linear-gradient(135deg, #f6c90e, #ffd93d);
+      color: #2c2200; border-color: #e6b800; font-weight: 700;
+      box-shadow: 0 3px 10px rgba(246,201,14,0.4);
+      transform: translateY(-2px);
+    }
+    .food-option label:hover { border-color: #f6c90e; background: #fff8d0; }
+
+    button[type=submit] {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #f6c90e, #ffd93d);
+      color: #2c2200; font-size: 1rem; font-weight: 700;
+      border: none; border-radius: 10px; cursor: pointer;
+      margin-top: 8px;
+      box-shadow: 0 4px 14px rgba(246,201,14,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button[type=submit]:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(246,201,14,0.5); }
+
+    /* ─── Success ─── */
+    .success-box { display: none; text-align: center; padding: 16px 0 8px; }
+    .success-icon {
+      width: 68px; height: 68px;
+      background: linear-gradient(135deg, #f6c90e, #ffd93d);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(246,201,14,0.4);
+    }
+    .success-box h2 { color: #2c2200; margin-bottom: 6px; }
+    .success-box p { color: #8a7500; font-size: 0.92rem; line-height: 1.6; }
+    .success-food { display: inline-block; margin-top: 12px; padding: 8px 20px; background: #fff8d0; border: 1.5px solid #f6c90e; border-radius: 99px; font-weight: 700; color: #2c2200; font-size: 0.9rem; }
+    .success-box button {
+      margin-top: 20px; padding: 11px 28px;
+      background: linear-gradient(135deg, #f6c90e, #ffd93d);
+      color: #2c2200; border: none; border-radius: 10px;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(246,201,14,0.35);
+      transition: transform 0.15s;
+    }
+    .success-box button:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">&#128221; แบบสอบถาม</span>
+    <a href="admin.html">&#9881; ระบบหลังบ้าน</a>
+  </div>
+
+  <!-- Tree Banner -->
+  <div class="tree-banner">
+    <div class="tree-svg-wrap">
+      <svg id="tree-svg" width="110" height="150" viewBox="0 0 110 150"></svg>
+    </div>
+    <div class="tree-info">
+      <div class="tree-count"><span id="reg-num">0</span> <span>คน</span></div>
+      <div class="tree-label">เข้าร่วมกิจกรรมแล้ว &#127795;</div>
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-goal">เป้าหมาย <span id="goal-label">30 คน</span></div>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="card">
+    <div id="form-section">
+      <div class="card-icon">&#128221;</div>
+      <h1>แบบสอบถาม</h1>
+      <p class="subtitle">กรุณากรอกข้อมูลของท่านให้ครบถ้วน</p>
+      <div class="divider"></div>
+
+      <form id="surveyForm" novalidate>
+        <div class="form-group">
+          <label for="name">ชื่อ-นามสกุล <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">&#128100;</span>
+            <input type="text" id="name" placeholder="เช่น สมชาย ใจดี">
+          </div>
+          <div class="error-msg" id="name-error">กรุณากรอกชื่อ-นามสกุล</div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">อีเมล <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">&#128140;</span>
+            <input type="email" id="email" placeholder="example@email.com">
+          </div>
+          <div class="error-msg" id="email-error">กรุณากรอกอีเมลให้ถูกต้อง</div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">เบอร์โทรศัพท์ <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">&#128222;</span>
+            <input type="tel" id="phone" placeholder="0XX-XXX-XXXX" maxlength="12">
+          </div>
+          <div class="error-msg" id="phone-error">กรุณากรอกเบอร์โทรให้ถูกต้อง (10 หลัก)</div>
+        </div>
+
+        <div class="form-group">
+          <label>เมนูอาหารกลางวัน <span class="req">*</span></label>
+          <div class="food-grid">
+            <div class="food-option"><input type="radio" name="food" id="f1" value="ข้าวผัด"><label for="f1"><span class="emoji">&#127859;</span>ข้าวผัด</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f2" value="ผัดไทย"><label for="f2"><span class="emoji">&#127837;</span>ผัดไทย</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f3" value="ข้าวมันไก่"><label for="f3"><span class="emoji">&#127831;</span>ข้าวมันไก่</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f4" value="ก๋วยเตี๋ยว"><label for="f4"><span class="emoji">&#127836;</span>ก๋วยเตี๋ยว</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f5" value="ข้าวกะเพรา"><label for="f5"><span class="emoji">&#127807;</span>ข้าวกะเพรา</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f6" value="ส้มตำ"><label for="f6"><span class="emoji">&#129382;</span>ส้มตำ</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f7" value="ข้าวหมูแดง"><label for="f7"><span class="emoji">&#129385;</span>ข้าวหมูแดง</label></div>
+            <div class="food-option"><input type="radio" name="food" id="f8" value="อื่นๆ"><label for="f8"><span class="emoji">&#127869;</span>อื่นๆ</label></div>
+          </div>
+          <div class="error-msg" id="food-error">กรุณาเลือกเมนูอาหาร</div>
+        </div>
+
+        <button type="submit">&#10003; ส่งข้อมูล</button>
+      </form>
+    </div>
+
+    <div class="success-box" id="success-section">
+      <div class="success-icon">&#10003;</div>
+      <h2>ส่งข้อมูลสำเร็จ!</h2>
+      <p>ขอบคุณที่กรอกแบบสอบถาม<br>เมนูที่คุณเลือก:</p>
+      <div class="success-food" id="success-food-label"></div>
+      <br>
+      <button onclick="resetForm()">&#8635; กรอกใหม่</button>
+    </div>
+  </div>
+
+  <script>
+    const GOAL = 30;
+
+    /* ── Tree rendering ── */
+    function getTreeParams(n) {
+      if (n === 0)  return { th: 6,  r1: 7,  r2: 0,  r3: 0,  fruits: 0 };
+      if (n <= 3)   return { th: 22, r1: 22, r2: 0,  r3: 0,  fruits: 0 };
+      if (n <= 8)   return { th: 35, r1: 30, r2: 0,  r3: 0,  fruits: 0 };
+      if (n <= 15)  return { th: 48, r1: 36, r2: 24, r3: 0,  fruits: 0 };
+      if (n <= 25)  return { th: 60, r1: 40, r2: 30, r3: 0,  fruits: 0 };
+      if (n <= 40)  return { th: 70, r1: 44, r2: 34, r3: 22, fruits: 4 };
+                    return { th: 78, r1: 46, r2: 36, r3: 26, fruits: 7 };
+    }
+
+    function renderTree(count) {
+      const p = getTreeParams(count);
+      const cx = 55, ground = 142;
+      const trunkTop = ground - p.th;
+      let html = '';
+
+      // Ground
+      html += `<ellipse cx="55" cy="${ground}" rx="40" ry="8" fill="#a0784a" opacity="0.6"/>`;
+      // Trunk
+      if (p.th > 0) html += `<rect x="50" y="${trunkTop}" width="10" height="${p.th}" fill="#8b5e3c" rx="3"/>`;
+      // Foliage
+      if (p.r1 > 0) {
+        const y1 = trunkTop + 10;
+        html += `<ellipse cx="${cx}" cy="${y1}" rx="${p.r1}" ry="${Math.round(p.r1*0.75)}" fill="#3a7a3a" opacity="0.92"/>`;
+        if (p.r2 > 0) {
+          const y2 = y1 - Math.round(p.r1 * 0.55);
+          html += `<ellipse cx="${cx}" cy="${y2}" rx="${p.r2}" ry="${Math.round(p.r2*0.75)}" fill="#4a9a4a"/>`;
+          if (p.r3 > 0) {
+            const y3 = y2 - Math.round(p.r2 * 0.55);
+            html += `<ellipse cx="${cx}" cy="${y3}" rx="${p.r3}" ry="${Math.round(p.r3*0.75)}" fill="#5abb5a"/>`;
+          }
+        }
+      }
+      // Fruits (yellow circles)
+      const fpos = [[-22,-8],[22,-8],[-14,-22],[14,-22],[-26,4],[26,4],[0,-30]];
+      for (let i = 0; i < p.fruits && i < fpos.length; i++) {
+        const [dx, dy] = fpos[i];
+        html += `<circle cx="${cx+dx}" cy="${trunkTop+dy}" r="5" fill="#f6c90e" stroke="#d4a800" stroke-width="1.2"/>`;
+      }
+
+      document.getElementById('tree-svg').innerHTML = html;
+    }
+
+    function updateBanner() {
+      const data = JSON.parse(localStorage.getItem('survey_registrations') || '[]');
+      const n = data.length;
+      document.getElementById('reg-num').textContent = n;
+      const pct = Math.min(100, Math.round((n / GOAL) * 100));
+      document.getElementById('progress-fill').style.width = pct + '%';
+      renderTree(n);
+    }
+
+    /* ── Form logic ── */
+    const form = document.getElementById('surveyForm');
+
+    document.getElementById('phone').addEventListener('input', function () {
+      let v = this.value.replace(/\D/g, '').slice(0, 10);
+      if (v.length > 6) v = v.slice(0,3)+'-'+v.slice(3,6)+'-'+v.slice(6);
+      else if (v.length > 3) v = v.slice(0,3)+'-'+v.slice(3);
+      this.value = v;
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      let ok = true;
+      const name  = document.getElementById('name');
+      const email = document.getElementById('email');
+      const phone = document.getElementById('phone');
+      const food  = document.querySelector('input[name=food]:checked');
+
+      if (!name.value.trim())                               { se(name,'name-error');  ok=false; } else ce(name,'name-error');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) { se(email,'email-error'); ok=false; } else ce(email,'email-error');
+      if (phone.value.replace(/\D/g,'').length !== 10)     { se(phone,'phone-error'); ok=false; } else ce(phone,'phone-error');
+      if (!food) {
+        document.getElementById('food-error').classList.add('show'); ok=false;
+      } else { document.getElementById('food-error').classList.remove('show'); }
+
+      if (ok) {
+        const rec = {
+          id: Date.now(),
+          name: name.value.trim(),
+          email: email.value.trim(),
+          phone: phone.value.trim(),
+          food: food.value,
+          registeredAt: new Date().toLocaleString('th-TH')
+        };
+        const arr = JSON.parse(localStorage.getItem('survey_registrations') || '[]');
+        arr.push(rec);
+        localStorage.setItem('survey_registrations', JSON.stringify(arr));
+
+        document.getElementById('success-food-label').textContent = '🍽️ ' + food.value;
+        document.getElementById('form-section').style.display = 'none';
+        document.getElementById('success-section').style.display = 'block';
+        updateBanner();
+      }
+    });
+
+    function se(el, id) { el.classList.add('error'); document.getElementById(id).classList.add('show'); }
+    function ce(el, id) { el.classList.remove('error'); document.getElementById(id).classList.remove('show'); }
+
+    function resetForm() {
+      form.reset();
+      document.getElementById('form-section').style.display = 'block';
+      document.getElementById('success-section').style.display = 'none';
+    }
+
+    updateBanner();
+  </script>
+</body>
+</html>
