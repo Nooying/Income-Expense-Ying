@@ -1393,14 +1393,48 @@ async function connectSync() {
 
     // ดึงข้อมูลจาก Cloud ก่อน (ถ้ามี)
     const snap = await fbDb.collection('pf').doc(key).get();
+    const localInc = DB.get(INCOME_KEY).length;
+    const localExp = DB.get(EXPENSE_KEY).length;
+    const localInv = DB.get(INVEST_KEY).length;
+    const hasLocal = localInc + localExp + localInv > 0;
+
     if (snap.exists) {
       const d = snap.data();
-      if (d.income)  DB.set(INCOME_KEY,  d.income);
-      if (d.expense) DB.set(EXPENSE_KEY, d.expense);
-      if (d.invest)  DB.set(INVEST_KEY,  d.invest);
-      lastSyncTime = d.lastSync || '';
-      renderDashboard();
-      toast('☁️ โหลดข้อมูลจาก Cloud สำเร็จค่ะ!');
+      const cloudInc = (d.income||[]).length;
+      const cloudExp = (d.expense||[]).length;
+      const cloudInv = (d.invest||[]).length;
+      const hasCloud = cloudInc + cloudExp + cloudInv > 0;
+
+      if (hasCloud && !hasLocal) {
+        // Cloud มีข้อมูล เครื่องนี้ว่าง → โหลดจาก Cloud
+        DB.set(INCOME_KEY,  d.income  || []);
+        DB.set(EXPENSE_KEY, d.expense || []);
+        DB.set(INVEST_KEY,  d.invest  || []);
+        lastSyncTime = d.lastSync || '';
+        renderDashboard();
+        toast('☁️ โหลดข้อมูลจาก Cloud สำเร็จค่ะ!');
+      } else if (hasLocal && !hasCloud) {
+        // เครื่องนี้มีข้อมูล Cloud ว่าง → push ขึ้น Cloud
+        await pushToCloud();
+        toast('☁️ อัปโหลดข้อมูลขึ้น Cloud สำเร็จค่ะ!');
+      } else if (hasCloud && hasLocal) {
+        // ทั้งคู่มีข้อมูล → เอาอันที่ใหม่กว่า
+        const localTime = localStorage.getItem('pf_last_sync') || '';
+        const cloudTime = d.lastSync || '';
+        if (cloudTime > localTime) {
+          DB.set(INCOME_KEY,  d.income  || []);
+          DB.set(EXPENSE_KEY, d.expense || []);
+          DB.set(INVEST_KEY,  d.invest  || []);
+          lastSyncTime = d.lastSync || '';
+          renderDashboard();
+          toast('☁️ โหลดข้อมูลล่าสุดจาก Cloud ค่ะ');
+        } else {
+          await pushToCloud();
+          toast('☁️ ซิงค์ข้อมูลจากเครื่องนี้ขึ้น Cloud ค่ะ');
+        }
+      } else {
+        toast('☁️ เชื่อมต่อสำเร็จ (ยังไม่มีข้อมูลค่ะ)');
+      }
     } else {
       // ไม่มีข้อมูลบน Cloud → push ข้อมูลปัจจุบันขึ้นไป
       await pushToCloud();
@@ -1423,16 +1457,19 @@ function startListener() {
     if (!snap.exists || isSyncing) return;
     const d = snap.data();
     const cloudTime = d.lastSync || '';
-    if (cloudTime && cloudTime !== lastSyncTime) {
-      lastSyncTime = cloudTime;
-      DB.set(INCOME_KEY,  d.income  || []);
-      DB.set(EXPENSE_KEY, d.expense || []);
-      DB.set(INVEST_KEY,  d.invest  || []);
-      renderDashboard();
-      const t = new Date(cloudTime).toLocaleTimeString('th-TH');
-      setSyncUI('connected', `Key: ${syncKey} | อัปเดตจากเครื่องอื่น ${t}`);
-      toast('🔄 ซิงค์ข้อมูลจากเครื่องอื่นแล้วค่ะ');
-    }
+    if (!cloudTime || cloudTime === lastSyncTime) return;
+    // ป้องกัน Cloud ว่างมา overwrite ข้อมูลในเครื่อง
+    const cloudTotal = (d.income||[]).length + (d.expense||[]).length + (d.invest||[]).length;
+    const localTotal = DB.get(INCOME_KEY).length + DB.get(EXPENSE_KEY).length + DB.get(INVEST_KEY).length;
+    if (cloudTotal === 0 && localTotal > 0) return;
+    lastSyncTime = cloudTime;
+    DB.set(INCOME_KEY,  d.income  || []);
+    DB.set(EXPENSE_KEY, d.expense || []);
+    DB.set(INVEST_KEY,  d.invest  || []);
+    renderDashboard();
+    const t = new Date(cloudTime).toLocaleTimeString('th-TH');
+    setSyncUI('connected', `Key: ${syncKey} | อัปเดตจากเครื่องอื่น ${t}`);
+    toast('🔄 ซิงค์ข้อมูลจากเครื่องอื่นแล้วค่ะ');
   }, err => setSyncUI('error', err.message));
 }
 
