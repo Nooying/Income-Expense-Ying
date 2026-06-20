@@ -160,6 +160,22 @@
   .profit-positive { color: var(--success-dark); font-weight: 700; }
   .profit-negative { color: var(--danger-dark); font-weight: 700; }
 
+  /* ── Exchange Rate Panel ── */
+  .rate-panel { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
+                box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 18px 22px; margin-bottom: 20px; }
+  .rate-panel-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .rate-panel-title { font-size: .95rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 7px; }
+  .rate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .rate-item { background: #fff5f8; border-radius: 10px; padding: 8px 12px; border: 1px solid var(--border); }
+  .rate-item .r-code { font-size: .72rem; font-weight: 700; color: var(--muted); }
+  .rate-item .r-val  { font-size: .95rem; font-weight: 700; color: var(--text); margin-top: 1px; }
+  .rate-item .r-name { font-size: .68rem; color: var(--muted); }
+  .rate-updated { font-size: .73rem; color: var(--muted); margin-top: 10px; }
+  .btn-rate { background: linear-gradient(135deg,#ce93d8,#ba68c8); color: #fff; box-shadow: 0 2px 8px rgba(186,104,200,.3); }
+  .btn-rate:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(186,104,200,.4); }
+  .rate-loading { color: var(--muted); font-size: .85rem; padding: 8px 0; }
+  .curr-tag { display: inline-block; background: #f3e5f5; color: #6a1b9a; border-radius: 6px; padding: 1px 7px; font-size: .75rem; font-weight: 700; margin-left: 4px; }
+
   /* ── Health Analysis ── */
   .health-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
                  box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 22px 24px; }
@@ -631,7 +647,28 @@
       </div>
       <div class="form-group">
         <label>🏷️ ชื่อสินทรัพย์ *</label>
-        <input type="text" id="inv-name" placeholder="เช่น PTT, SCB Easy, ทองคำแท่ง">
+        <input type="text" id="inv-name" placeholder="เช่น PTT, AAPL, ทองคำแท่ง, BTC">
+      </div>
+      <div class="form-group">
+        <label>💱 สกุลเงิน *</label>
+        <select id="inv-currency">
+          <option value="THB">🇹🇭 THB — บาทไทย</option>
+          <option value="USD">🇺🇸 USD — ดอลลาร์สหรัฐ</option>
+          <option value="EUR">🇪🇺 EUR — ยูโร</option>
+          <option value="JPY">🇯🇵 JPY — เยนญี่ปุ่น</option>
+          <option value="GBP">🇬🇧 GBP — ปอนด์อังกฤษ</option>
+          <option value="CNY">🇨🇳 CNY — หยวนจีน</option>
+          <option value="SGD">🇸🇬 SGD — ดอลลาร์สิงคโปร์</option>
+          <option value="HKD">🇭🇰 HKD — ดอลลาร์ฮ่องกง</option>
+          <option value="AUD">🇦🇺 AUD — ดอลลาร์ออสเตรเลีย</option>
+          <option value="KRW">🇰🇷 KRW — วอนเกาหลี</option>
+          <option value="TWD">🇹🇼 TWD — ดอลลาร์ไต้หวัน</option>
+          <option value="MYR">🇲🇾 MYR — ริงกิตมาเลเซีย</option>
+          <option value="IDR">🇮🇩 IDR — รูเปียห์อินโดนีเซีย</option>
+          <option value="VND">🇻🇳 VND — ด่งเวียดนาม</option>
+          <option value="CHF">🇨🇭 CHF — ฟรังก์สวิส</option>
+          <option value="CAD">🇨🇦 CAD — ดอลลาร์แคนาดา</option>
+        </select>
       </div>
       <div class="form-group">
         <label>📊 ประเภท *</label>
@@ -654,11 +691,11 @@
         <input type="number" id="inv-qty" placeholder="0" min="0" step="any">
       </div>
       <div class="form-group">
-        <label>💵 ราคาต้นทุน/หน่วย (บาท) *</label>
+        <label>💵 ราคาต้นทุน/หน่วย *</label>
         <input type="number" id="inv-cost" placeholder="0.00" min="0" step="0.0001">
       </div>
       <div class="form-group">
-        <label>💹 ราคาปัจจุบัน/หน่วย (บาท)</label>
+        <label>💹 ราคาปัจจุบัน/หน่วย</label>
         <input type="number" id="inv-price" placeholder="0.00" min="0" step="0.0001">
       </div>
       <div class="form-group form-full">
@@ -672,6 +709,27 @@
     </div>
   </div>
 
+  <!-- Exchange Rate Panel -->
+  <div class="rate-panel">
+    <div class="rate-panel-top">
+      <div class="rate-panel-title">💱 อัตราแลกเปลี่ยน ณ ปัจจุบัน
+        <span style="font-size:.72rem;font-weight:400;color:var(--muted)">(อ้างอิงใกล้เคียง ธปท.)</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-rate btn-sm" onclick="fetchRates()">🔄 ดึงอัตราแลกเปลี่ยนล่าสุด</button>
+        <a href="https://www.bot.or.th/th/financial-economic-data/financial-markets/exchange-rates.html"
+           target="_blank" rel="noopener"
+           class="btn btn-sm" style="background:#fce4ec;color:#ad1457;border:1px solid #f48fb1;text-decoration:none">
+          🏦 ธปท. (BOT)
+        </a>
+      </div>
+    </div>
+    <div id="rate-grid" class="rate-grid">
+      <div class="rate-loading">กด "ดึงอัตราแลกเปลี่ยนล่าสุด" เพื่อโหลดข้อมูลค่ะ 🐻</div>
+    </div>
+    <div id="rate-updated" class="rate-updated"></div>
+  </div>
+
   <div class="invest-summary" id="inv-summary-cards"></div>
 
   <div class="table-card">
@@ -681,7 +739,7 @@
     </div>
     <div style="overflow-x:auto">
       <table>
-        <thead><tr><th>วันที่ซื้อ</th><th>ชื่อสินทรัพย์</th><th>ประเภท</th><th>จำนวน</th><th>ต้นทุน/หน่วย</th><th>ราคาปัจจุบัน/หน่วย</th><th>มูลค่ารวม</th><th>กำไร/ขาดทุน</th><th>อัปเดต</th><th>ลบ</th></tr></thead>
+        <thead><tr><th>วันที่ซื้อ</th><th>ชื่อสินทรัพย์</th><th>ประเภท</th><th>สกุลเงิน</th><th>จำนวน</th><th>ต้นทุน/หน่วย</th><th>ราคาปัจจุบัน/หน่วย</th><th>มูลค่ารวม (THB)</th><th>กำไร/ขาดทุน (THB)</th><th>อัปเดต</th><th>ลบ</th></tr></thead>
         <tbody id="invest-tbody"></tbody>
       </table>
     </div>
@@ -697,6 +755,74 @@
 <script>
 const DB = { get: k => JSON.parse(localStorage.getItem(k)||'[]'), set: (k,v) => localStorage.setItem(k,JSON.stringify(v)) };
 const INCOME_KEY='pf_income', EXPENSE_KEY='pf_expense', INVEST_KEY='pf_invest';
+
+// ── Exchange Rates ──
+let exRates = JSON.parse(localStorage.getItem('pf_exrates')||'{}');
+let exRateDate = localStorage.getItem('pf_exrate_date')||'';
+
+const CURRENCIES = {
+  THB:{name:'บาทไทย',flag:'🇹🇭'}, USD:{name:'ดอลลาร์สหรัฐ',flag:'🇺🇸'},
+  EUR:{name:'ยูโร',flag:'🇪🇺'}, JPY:{name:'เยนญี่ปุ่น',flag:'🇯🇵'},
+  GBP:{name:'ปอนด์อังกฤษ',flag:'🇬🇧'}, CNY:{name:'หยวนจีน',flag:'🇨🇳'},
+  SGD:{name:'ดอลลาร์สิงคโปร์',flag:'🇸🇬'}, HKD:{name:'ดอลลาร์ฮ่องกง',flag:'🇭🇰'},
+  AUD:{name:'ดอลลาร์ออสเตรเลีย',flag:'🇦🇺'}, KRW:{name:'วอนเกาหลี',flag:'🇰🇷'},
+  TWD:{name:'ดอลลาร์ไต้หวัน',flag:'🇹🇼'}, MYR:{name:'ริงกิตมาเลเซีย',flag:'🇲🇾'},
+  IDR:{name:'รูเปียห์อินโดนีเซีย',flag:'🇮🇩'}, VND:{name:'ด่งเวียดนาม',flag:'🇻🇳'},
+  CHF:{name:'ฟรังก์สวิส',flag:'🇨🇭'}, CAD:{name:'ดอลลาร์แคนาดา',flag:'🇨🇦'},
+};
+
+// 1 THB = exRates[currency] → ดังนั้น 1 currency = 1/exRates[currency] THB
+function toTHB(amount, currency) {
+  if (!currency || currency === 'THB') return amount;
+  const rate = exRates[currency.toLowerCase()];
+  if (!rate || rate === 0) return amount; // fallback ถ้าไม่มีอัตรา
+  return amount / rate; // 1 THB = rate หน่วยสกุลนั้น → 1 หน่วย = 1/rate THB
+}
+
+function fmtCurr(amount, currency) {
+  const sym = {THB:'฿',USD:'$',EUR:'€',JPY:'¥',GBP:'£',CNY:'¥',SGD:'S$',HKD:'HK$',AUD:'A$',KRW:'₩',TWD:'NT$',MYR:'RM',IDR:'Rp',VND:'₫',CHF:'Fr',CAD:'C$'};
+  const s = sym[currency]||currency+' ';
+  return s + Number(amount).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function fetchRates() {
+  const grid = document.getElementById('rate-grid');
+  const upd  = document.getElementById('rate-updated');
+  grid.innerHTML = '<div class="rate-loading">⏳ กำลังโหลดอัตราแลกเปลี่ยน...</div>';
+  try {
+    // ใช้ CDN currency API (อัปเดตทุกวัน อ้างอิงใกล้เคียง BOT)
+    const res  = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/thb.json');
+    const data = await res.json();
+    exRates = data.thb; // 1 THB = exRates[code] ของสกุลนั้น
+    exRateDate = data.date;
+    localStorage.setItem('pf_exrates', JSON.stringify(exRates));
+    localStorage.setItem('pf_exrate_date', exRateDate);
+    renderRateGrid();
+    renderInvestTable();
+    toast('💱 อัปเดตอัตราแลกเปลี่ยนแล้วค่ะ');
+  } catch(e) {
+    grid.innerHTML = '<div class="rate-loading" style="color:var(--danger-dark)">❌ โหลดไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต</div>';
+  }
+}
+
+function renderRateGrid() {
+  const grid = document.getElementById('rate-grid');
+  const upd  = document.getElementById('rate-updated');
+  if (!exRates || !Object.keys(exRates).length) return;
+  const show = ['usd','eur','jpy','gbp','cny','sgd','hkd','aud','krw','twd','myr','idr','vnd','chf','cad'];
+  grid.innerHTML = show.map(code => {
+    const rate = exRates[code];
+    if (!rate) return '';
+    const thbPer1 = (1/rate).toFixed(code==='jpy'||code==='krw'||code==='idr'||code==='vnd'?4:4);
+    const C = CURRENCIES[code.toUpperCase()]||{name:code.toUpperCase(),flag:'💱'};
+    return `<div class="rate-item">
+      <div class="r-code">${C.flag} ${code.toUpperCase()}</div>
+      <div class="r-val">฿${Number(thbPer1).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>
+      <div class="r-name">${C.name}</div>
+    </div>`;
+  }).join('');
+  upd.innerHTML = `📅 อัตราอ้างอิงวันที่ ${exRateDate} | แหล่งข้อมูล: <a href="https://www.bot.or.th/th/financial-economic-data/financial-markets/exchange-rates.html" target="_blank" style="color:var(--primary)">ธนาคารแห่งประเทศไทย (BOT)</a>`;
+}
 const fmt = n => '฿'+Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
 const today = () => new Date().toISOString().slice(0,10);
 const thisMonth = () => new Date().toISOString().slice(0,7);
@@ -796,62 +922,95 @@ function renderExpenseTable() {
 // ── INVEST ──
 function saveInvest() {
   const date=document.getElementById('inv-date').value, name=document.getElementById('inv-name').value.trim(),
+        currency=document.getElementById('inv-currency').value||'THB',
         type=document.getElementById('inv-type').value, qty=parseFloat(document.getElementById('inv-qty').value)||1,
         cost=parseFloat(document.getElementById('inv-cost').value), price=parseFloat(document.getElementById('inv-price').value)||cost,
         note=document.getElementById('inv-note').value.trim();
   if (!date||!name||!type||isNaN(cost)||cost<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
-  const arr=DB.get(INVEST_KEY); arr.push({id:uid(),date,name,type,qty,cost,price,note}); DB.set(INVEST_KEY,arr);
+  const arr=DB.get(INVEST_KEY); arr.push({id:uid(),date,name,type,currency,qty,cost,price,note}); DB.set(INVEST_KEY,arr);
   toast('🩷 บันทึกการลงทุนเรียบร้อยแล้วค่ะ'); clearInvForm(); renderInvestTable();
 }
 function clearInvForm() {
   ['inv-name','inv-qty','inv-cost','inv-price','inv-note'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('inv-type').value=''; document.getElementById('inv-date').value=today();
+  document.getElementById('inv-type').value='';
+  document.getElementById('inv-currency').value='THB';
+  document.getElementById('inv-date').value=today();
 }
 function deleteInvest(id) {
   if (!confirm('ลบรายการนี้นะคะ?')) return;
   DB.set(INVEST_KEY,DB.get(INVEST_KEY).filter(r=>r.id!==id)); renderInvestTable(); toast('🗑️ ลบรายการแล้ว');
 }
 function updateInvestPrice(id) {
-  const priceStr=prompt('กรอกราคาปัจจุบัน/หน่วย (บาท):'); if (priceStr===null) return;
+  const r = DB.get(INVEST_KEY).find(x=>x.id===id);
+  const curr = r?.currency||'THB';
+  const C = CURRENCIES[curr]||{flag:'💱'};
+  const priceStr=prompt(`กรอกราคาปัจจุบัน/หน่วย (${C.flag} ${curr}):`);
+  if (priceStr===null) return;
   const price=parseFloat(priceStr); if (isNaN(price)||price<0) { toast('ราคาไม่ถูกต้อง'); return; }
-  const arr=DB.get(INVEST_KEY), idx=arr.findIndex(r=>r.id===id);
+  const arr=DB.get(INVEST_KEY), idx=arr.findIndex(x=>x.id===id);
   if (idx>=0) { arr[idx].price=price; DB.set(INVEST_KEY,arr); }
   renderInvestTable(); toast('💹 อัปเดตราคาแล้วค่ะ');
 }
 function renderInvestTable() {
+  // โหลด rates ที่ cache ไว้ถ้ามี
+  if (!Object.keys(exRates).length) {
+    const saved = localStorage.getItem('pf_exrates');
+    if (saved) { exRates = JSON.parse(saved); exRateDate = localStorage.getItem('pf_exrate_date')||''; }
+  }
+  if (Object.keys(exRates).length) renderRateGrid();
+
   const search=document.getElementById('inv-search').value.toLowerCase();
   let data=DB.get(INVEST_KEY);
-  if (search) data=data.filter(r=>r.name.toLowerCase().includes(search)||r.type.toLowerCase().includes(search));
+  // migration: รายการเก่าที่ไม่มี currency ให้ default THB
+  data = data.map(r=>({...r, currency: r.currency||'THB'}));
+  if (search) data=data.filter(r=>r.name.toLowerCase().includes(search)||r.type.toLowerCase().includes(search)||(r.currency||'').toLowerCase().includes(search));
   data.sort((a,b)=>b.date.localeCompare(a.date));
-  const allData=DB.get(INVEST_KEY);
-  const totalCost=allData.reduce((s,r)=>s+r.qty*r.cost,0);
-  const totalVal=allData.reduce((s,r)=>s+r.qty*r.price,0);
-  const totalPnl=totalVal-totalCost;
-  const pnlPct=totalCost>0?(totalPnl/totalCost*100):0;
+
+  const allData=DB.get(INVEST_KEY).map(r=>({...r,currency:r.currency||'THB'}));
+  const totalCostTHB=allData.reduce((s,r)=>s+toTHB(r.qty*r.cost, r.currency),0);
+  const totalValTHB =allData.reduce((s,r)=>s+toTHB(r.qty*r.price,r.currency),0);
+  const totalPnl=totalValTHB-totalCostTHB;
+  const pnlPct=totalCostTHB>0?(totalPnl/totalCostTHB*100):0;
+  const hasRates = Object.keys(exRates).length > 0;
+
   document.getElementById('inv-summary-cards').innerHTML=`
-    <div class="invest-mini-card"><div class="label">💹 มูลค่ารวมปัจจุบัน</div><div class="val">${fmt(totalVal)}</div></div>
-    <div class="invest-mini-card"><div class="label">💵 ต้นทุนรวม</div><div class="val" style="color:var(--text)">${fmt(totalCost)}</div></div>
-    <div class="invest-mini-card"><div class="label">📊 กำไร/ขาดทุนรวม</div><div class="val ${totalPnl>=0?'profit-positive':'profit-negative'}">${totalPnl>=0?'+':''}${fmt(totalPnl)} (${pnlPct.toFixed(2)}%)</div></div>
-    <div class="invest-mini-card"><div class="label">🏷️ จำนวนสินทรัพย์</div><div class="val" style="color:var(--text)">${allData.length} รายการ</div></div>`;
+    <div class="invest-mini-card"><div class="label">💹 มูลค่ารวม (THB)</div><div class="val">${fmt(totalValTHB)}</div></div>
+    <div class="invest-mini-card"><div class="label">💵 ต้นทุนรวม (THB)</div><div class="val" style="color:var(--text)">${fmt(totalCostTHB)}</div></div>
+    <div class="invest-mini-card"><div class="label">📊 กำไร/ขาดทุนรวม</div><div class="val ${totalPnl>=0?'profit-positive':'profit-negative'}">${totalPnl>=0?'+':''}${fmt(totalPnl)}<br><span style="font-size:.78rem">(${pnlPct.toFixed(2)}%)</span></div></div>
+    <div class="invest-mini-card"><div class="label">🏷️ จำนวนสินทรัพย์</div><div class="val" style="color:var(--text)">${allData.length} รายการ</div></div>
+    ${!hasRates?'<div class="invest-mini-card" style="border-color:#f48fb1"><div class="label" style="color:#ad1457">⚠️ หมายเหตุ</div><div class="val" style="font-size:.8rem;color:#ad1457;font-weight:500">กด "ดึงอัตราแลกเปลี่ยนล่าสุด" เพื่อคำนวณ THB ถูกต้องค่ะ</div></div>':''}`;
+
   const tbody=document.getElementById('invest-tbody'), empty=document.getElementById('invest-empty');
   if (!data.length) { tbody.innerHTML=''; empty.style.display=''; document.getElementById('inv-total-row').textContent=''; return; }
   empty.style.display='none';
+
   tbody.innerHTML=data.map(r=>{
-    const ct=r.qty*r.cost, vt=r.qty*r.price, pnl=vt-ct, pct=ct>0?(pnl/ct*100):0;
+    const curr = r.currency||'THB';
+    const C = CURRENCIES[curr]||{flag:'💱',name:curr};
+    const costOrig = r.qty*r.cost, priceOrig = r.qty*r.price;
+    const costTHB  = toTHB(costOrig, curr);
+    const valTHB   = toTHB(priceOrig, curr);
+    const pnlTHB   = valTHB - costTHB;
+    const pct      = costTHB>0?(pnlTHB/costTHB*100):0;
+    const rateStr  = curr!=='THB' && exRates[curr.toLowerCase()]
+      ? `<br><span style="font-size:.7rem;color:var(--muted)">1 ${curr} = ฿${(1/exRates[curr.toLowerCase()]).toFixed(4)}</span>`
+      : '';
     return `<tr>
       <td>${r.date}</td>
       <td><strong>${r.name}</strong>${r.note?'<br><span style="font-size:.76rem;color:var(--muted)">'+r.note+'</span>':''}</td>
       <td><span class="badge badge-invest">${r.type}</span></td>
-      <td>${r.qty.toLocaleString()}</td>
-      <td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td>
-      <td class="amount-invest">${fmt(vt)}</td>
-      <td class="${pnl>=0?'profit-positive':'profit-negative'}">${pnl>=0?'+':''}${fmt(pnl)}<br><span style="font-size:.76rem">(${pct.toFixed(2)}%)</span></td>
+      <td><span class="curr-tag">${C.flag} ${curr}</span>${rateStr}</td>
+      <td>${fmtCurr(r.cost,curr)}</td>
+      <td>${fmtCurr(r.price,curr)}</td>
+      <td class="amount-invest">${fmt(valTHB)}<br><span style="font-size:.75rem;color:var(--muted)">${curr!=='THB'?fmtCurr(priceOrig,curr):''}</span></td>
+      <td class="${pnlTHB>=0?'profit-positive':'profit-negative'}">${pnlTHB>=0?'+':''}${fmt(pnlTHB)}<br><span style="font-size:.76rem">(${pct.toFixed(2)}%)</span></td>
       <td><button class="btn btn-sm" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #ce93d8" onclick="updateInvestPrice('${r.id}')">💹 อัปเดต</button></td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteInvest('${r.id}')">ลบ</button></td>
     </tr>`;
   }).join('');
-  const fv=data.reduce((s,r)=>s+r.qty*r.price,0);
-  document.getElementById('inv-total-row').textContent=`📈 แสดง ${data.length} รายการ | มูลค่ารวม: ${fmt(fv)}`;
+
+  const fv=data.reduce((s,r)=>s+toTHB(r.qty*r.price,r.currency||'THB'),0);
+  document.getElementById('inv-total-row').textContent=`📈 แสดง ${data.length} รายการ | มูลค่ารวม (THB): ${fmt(fv)}`;
 }
 
 // ── DASHBOARD ──
