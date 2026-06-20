@@ -176,6 +176,15 @@
   .rate-loading { color: var(--muted); font-size: .85rem; padding: 8px 0; }
   .curr-tag { display: inline-block; background: #f3e5f5; color: #6a1b9a; border-radius: 6px; padding: 1px 7px; font-size: .75rem; font-weight: 700; margin-left: 4px; }
 
+  /* ── Share Panel ── */
+  .share-bar { background: linear-gradient(135deg,#fff0f5,#fce4ec); border: 1.5px solid var(--border);
+               border-radius: 14px; padding: 14px 20px; display: flex; align-items: center;
+               gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .share-bar-label { font-size: .88rem; font-weight: 600; color: var(--primary-dark); white-space: nowrap; }
+  .btn-export { background: linear-gradient(135deg,#81c784,#4caf50); color:#fff; box-shadow:0 2px 8px rgba(76,175,80,.3); }
+  .btn-import { background: linear-gradient(135deg,#64b5f6,#1976d2); color:#fff; box-shadow:0 2px 8px rgba(25,118,210,.3); }
+  #import-file { display:none; }
+
   /* ── Health Analysis ── */
   .health-card { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border);
                  box-shadow: 0 2px 12px rgba(233,30,140,.07); padding: 22px 24px; }
@@ -345,6 +354,15 @@
       <circle cx="74" cy="82" r="8" fill="#ffe0b2"/>
     </svg>
     <h1>Dashboard การเงิน</h1>
+  </div>
+
+  <!-- Share Bar -->
+  <div class="share-bar">
+    <span class="share-bar-label">🔗 แชร์ข้อมูลให้เพื่อน</span>
+    <button class="btn btn-export btn-sm" onclick="exportData()">📤 ส่งออกข้อมูล (.json)</button>
+    <button class="btn btn-import btn-sm" onclick="document.getElementById('import-file').click()">📥 นำเข้าข้อมูล</button>
+    <input type="file" id="import-file" accept=".json" onchange="importData(event)">
+    <span style="font-size:.78rem;color:var(--muted)">ส่งไฟล์ .json ให้เพื่อน → เพื่อนกด "นำเข้าข้อมูล" เพื่อดูข้อมูลของคุณได้เลยค่ะ</span>
   </div>
 
   <div class="month-row">
@@ -1225,6 +1243,59 @@ function renderPieChart(month) {
       plugins:{legend:{position:'bottom',labels:{font:{family:'Prompt',size:11}}},
                tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}
   });
+}
+
+// ── EXPORT / IMPORT ──
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    exportedBy: 'บริหารการเงินส่วนบุคคล 🐻🩷',
+    income:  DB.get(INCOME_KEY),
+    expense: DB.get(EXPENSE_KEY),
+    invest:  DB.get(INVEST_KEY),
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `การเงินส่วนบุคคล_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📤 ส่งออกข้อมูลเรียบร้อยแล้วค่ะ — ส่งไฟล์ .json ให้เพื่อนได้เลย 🩷');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.income || !data.expense || !data.invest) {
+        toast('❌ ไฟล์ไม่ถูกต้อง กรุณาใช้ไฟล์ที่ส่งออกจากแอปนี้ค่ะ'); return;
+      }
+      const existInc  = DB.get(INCOME_KEY).length;
+      const existExp  = DB.get(EXPENSE_KEY).length;
+      const existInv  = DB.get(INVEST_KEY).length;
+      const hasData   = existInc + existExp + existInv > 0;
+      const msg = hasData
+        ? `นำเข้าข้อมูลจาก "${file.name}" ?\n\nข้อมูลปัจจุบันของคุณจะถูกแทนที่!\nรายรับ ${data.income.length} รายการ, รายจ่าย ${data.expense.length} รายการ, ลงทุน ${data.invest.length} รายการ`
+        : `นำเข้าข้อมูลจาก "${file.name}" ?\nรายรับ ${data.income.length} รายการ, รายจ่าย ${data.expense.length} รายการ, ลงทุน ${data.invest.length} รายการ`;
+      if (!confirm(msg)) { event.target.value=''; return; }
+      DB.set(INCOME_KEY,  data.income);
+      DB.set(EXPENSE_KEY, data.expense);
+      DB.set(INVEST_KEY,  data.invest);
+      event.target.value = '';
+      renderDashboard();
+      toast(`✅ นำเข้าข้อมูลเรียบร้อยแล้วค่ะ 🩷 (รายรับ ${data.income.length} | รายจ่าย ${data.expense.length} | ลงทุน ${data.invest.length})`);
+    } catch(err) {
+      toast('❌ เกิดข้อผิดพลาด ไฟล์ไม่ถูกต้องค่ะ');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ── Init ──
