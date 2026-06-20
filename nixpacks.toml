@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["python311"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = []
 
 [start]
-cmd = "node server.js"
+cmd = "python -u app.py"

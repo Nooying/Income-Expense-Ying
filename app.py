@@ -1,16 +1,18 @@
-from flask import Flask, send_from_directory
+import http.server
 import os
+import socketserver
 
-app = Flask(__name__)
 PORT = int(os.environ.get('PORT', 8080))
 
-@app.route('/')
-def index():
-    return send_from_directory('public', 'index.html')
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/':
+            self.path = '/finance-app.html'
+        return super().do_GET()
 
-@app.route('/<path:filename>')
-def static_files(filename):
-    return send_from_directory('public', filename)
+    def log_message(self, format, *args):
+        print(f"[{self.address_string()}] {format % args}")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+with socketserver.TCPServer(('0.0.0.0', PORT), Handler) as httpd:
+    print(f"Finance App running on port {PORT}")
+    httpd.serve_forever()
