@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>บริหารการเงินส่วนบุคคล 🐻🩷</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,6 +177,36 @@
   .btn-rate:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(186,104,200,.4); }
   .rate-loading { color: var(--muted); font-size: .85rem; padding: 8px 0; }
   .curr-tag { display: inline-block; background: #f3e5f5; color: #6a1b9a; border-radius: 6px; padding: 1px 7px; font-size: .75rem; font-weight: 700; margin-left: 4px; }
+
+  /* ── Cloud Sync ── */
+  .sync-bar { background: linear-gradient(135deg,#e8f5e9,#f1f8e9); border:1.5px solid #a5d6a7;
+              border-radius:14px; padding:14px 20px; margin-bottom:16px; }
+  .sync-bar.connected { background:linear-gradient(135deg,#e8f5e9,#c8e6c9); border-color:#66bb6a; }
+  .sync-bar.error     { background:linear-gradient(135deg,#fce4ec,#ffebee); border-color:#ef9a9a; }
+  .sync-top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .sync-status-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .dot-off      { background:#bdbdbd; }
+  .dot-synced   { background:#4caf50; box-shadow:0 0 6px #4caf50; }
+  .dot-syncing  { background:#ff9800; animation:pulse-dot .8s ease-in-out infinite; }
+  .dot-error    { background:#f44336; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .sync-label { font-size:.88rem; font-weight:700; color:#2e7d32; }
+  .sync-label.off   { color:#757575; }
+  .sync-label.error { color:#c62828; }
+  .sync-detail { font-size:.75rem; color:#558b2f; margin-top:2px; }
+  .sync-setup { margin-top:14px; padding-top:14px; border-top:1px solid #c8e6c9; display:none; }
+  .sync-setup.open { display:block; }
+  .sync-steps { font-size:.82rem; color:#33691e; line-height:1.9; margin-bottom:14px; }
+  .sync-steps a { color:#1b5e20; font-weight:600; }
+  .sync-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  @media(max-width:600px){ .sync-fields { grid-template-columns:1fr; } }
+  .sync-fields input { font-size:.82rem; padding:8px 11px; }
+  .sync-key-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .sync-key-row input { flex:1; font-size:.88rem; }
+  .btn-sync-connect { background:linear-gradient(135deg,#66bb6a,#388e3c); color:#fff; box-shadow:0 2px 8px rgba(56,142,60,.3); }
+  .btn-sync-disconnect { background:#ffebee; color:#c62828; border:1px solid #ef9a9a; }
+  .btn-sync-now { background:linear-gradient(135deg,#42a5f5,#1565c0); color:#fff; box-shadow:0 2px 8px rgba(21,101,192,.3); }
+  .config-paste { width:100%; font-size:.75rem; font-family:monospace; min-height:80px; margin-bottom:10px; }
 
   /* ── Share Panel ── */
   .share-bar { background: linear-gradient(135deg,#fff0f5,#fce4ec); border: 1.5px solid var(--border);
@@ -354,6 +386,43 @@
       <circle cx="74" cy="82" r="8" fill="#ffe0b2"/>
     </svg>
     <h1>Dashboard การเงิน</h1>
+  </div>
+
+  <!-- Cloud Sync Panel -->
+  <div id="sync-bar" class="sync-bar">
+    <div class="sync-top">
+      <div id="sync-dot" class="sync-status-dot dot-off"></div>
+      <div>
+        <div id="sync-label" class="sync-label off">☁️ ยังไม่ได้เชื่อมต่อ Cloud</div>
+        <div id="sync-detail" class="sync-detail"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto">
+        <button id="btn-setup-toggle" class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7" onclick="toggleSyncSetup()">⚙️ ตั้งค่าซิงค์</button>
+        <button id="btn-sync-now" class="btn btn-sync-now btn-sm" onclick="syncNow()" style="display:none">🔄 ซิงค์ตอนนี้</button>
+        <button id="btn-disconnect" class="btn btn-sync-disconnect btn-sm" onclick="disconnectSync()" style="display:none">ยกเลิกซิงค์</button>
+      </div>
+    </div>
+
+    <div id="sync-setup" class="sync-setup">
+      <div class="sync-steps">
+        <strong style="font-size:.88rem;color:#1b5e20">📋 วิธีตั้งค่า (ทำครั้งเดียวค่ะ)</strong><br>
+        1️⃣ ไปที่ <a href="https://console.firebase.google.com/" target="_blank">console.firebase.google.com</a> → สร้างโปรเจกต์ใหม่ (ฟรี)<br>
+        2️⃣ เปิด <strong>Firestore Database</strong> → เลือก <em>Start in test mode</em><br>
+        3️⃣ ไปที่ ⚙️ Project Settings → <strong>Your apps</strong> → เพิ่ม Web App (&lt;/&gt;)<br>
+        4️⃣ Copy <code>firebaseConfig</code> แล้ววางด้านล่างนี้เลยค่ะ
+      </div>
+
+      <label style="font-size:.8rem;font-weight:700;color:#33691e">📋 วาง Firebase Config (JSON) ที่นี่</label>
+      <textarea id="firebase-config-input" class="config-paste" placeholder='{"apiKey":"AIza...","authDomain":"xxx.firebaseapp.com","projectId":"xxx",...}'></textarea>
+
+      <label style="font-size:.8rem;font-weight:700;color:#33691e;display:block;margin-bottom:5px">🔑 Sync Key — รหัสส่วนตัวของคุณ (ใส่เหมือนกันทุกเครื่อง)</label>
+      <div class="sync-key-row">
+        <input type="text" id="sync-key-input" placeholder="เช่น nooying-family-2026" maxlength="50">
+        <button class="btn btn-sm" style="background:#f3e5f5;color:#6a1b9a;white-space:nowrap" onclick="genKey()">🎲 สุ่มรหัส</button>
+      </div>
+      <div style="font-size:.75rem;color:#558b2f;margin-bottom:12px">⚠️ Sync Key คือรหัสที่ใช้แยกข้อมูลของคุณจากคนอื่น — จำไว้ใส่เครื่องอื่นด้วยนะคะ</div>
+      <button class="btn btn-sync-connect" onclick="connectSync()">✅ เชื่อมต่อ Firebase</button>
+    </div>
   </div>
 
   <!-- Share Bar -->
@@ -870,7 +939,7 @@ function saveIncome() {
         note=document.getElementById('inc-note').value.trim();
   if (!date||!name||!cat||isNaN(amount)||amount<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
   const arr=DB.get(INCOME_KEY); arr.push({id:uid(),date,name,cat,amount,note}); DB.set(INCOME_KEY,arr);
-  toast('🩷 บันทึกรายรับเรียบร้อยแล้วค่ะ'); clearIncForm(); renderIncomeTable();
+  toast('🩷 บันทึกรายรับเรียบร้อยแล้วค่ะ'); clearIncForm(); renderIncomeTable(); pushToCloud();
 }
 function clearIncForm() {
   ['inc-name','inc-amount','inc-note'].forEach(id=>document.getElementById(id).value='');
@@ -878,7 +947,7 @@ function clearIncForm() {
 }
 function deleteIncome(id) {
   if (!confirm('ลบรายการนี้นะคะ?')) return;
-  DB.set(INCOME_KEY,DB.get(INCOME_KEY).filter(r=>r.id!==id)); renderIncomeTable(); toast('🗑️ ลบรายการแล้ว');
+  DB.set(INCOME_KEY,DB.get(INCOME_KEY).filter(r=>r.id!==id)); renderIncomeTable(); toast('🗑️ ลบรายการแล้ว'); pushToCloud();
 }
 function renderIncomeTable() {
   const month=document.getElementById('inc-filter-month').value, search=document.getElementById('inc-search').value.toLowerCase();
@@ -907,7 +976,7 @@ function saveExpense() {
         note=document.getElementById('exp-note').value.trim();
   if (!date||!name||!cat||isNaN(amount)||amount<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
   const arr=DB.get(EXPENSE_KEY); arr.push({id:uid(),date,name,cat,amount,note}); DB.set(EXPENSE_KEY,arr);
-  toast('🩷 บันทึกรายจ่ายเรียบร้อยแล้วค่ะ'); clearExpForm(); renderExpenseTable();
+  toast('🩷 บันทึกรายจ่ายเรียบร้อยแล้วค่ะ'); clearExpForm(); renderExpenseTable(); pushToCloud();
 }
 function clearExpForm() {
   ['exp-name','exp-amount','exp-note'].forEach(id=>document.getElementById(id).value='');
@@ -915,7 +984,7 @@ function clearExpForm() {
 }
 function deleteExpense(id) {
   if (!confirm('ลบรายการนี้นะคะ?')) return;
-  DB.set(EXPENSE_KEY,DB.get(EXPENSE_KEY).filter(r=>r.id!==id)); renderExpenseTable(); toast('🗑️ ลบรายการแล้ว');
+  DB.set(EXPENSE_KEY,DB.get(EXPENSE_KEY).filter(r=>r.id!==id)); renderExpenseTable(); toast('🗑️ ลบรายการแล้ว'); pushToCloud();
 }
 function renderExpenseTable() {
   const month=document.getElementById('exp-filter-month').value, search=document.getElementById('exp-search').value.toLowerCase();
@@ -946,7 +1015,7 @@ function saveInvest() {
         note=document.getElementById('inv-note').value.trim();
   if (!date||!name||!type||isNaN(cost)||cost<=0) { toast('🐻 กรุณากรอกข้อมูลให้ครบถ้วนนะคะ'); return; }
   const arr=DB.get(INVEST_KEY); arr.push({id:uid(),date,name,type,currency,qty,cost,price,note}); DB.set(INVEST_KEY,arr);
-  toast('🩷 บันทึกการลงทุนเรียบร้อยแล้วค่ะ'); clearInvForm(); renderInvestTable();
+  toast('🩷 บันทึกการลงทุนเรียบร้อยแล้วค่ะ'); clearInvForm(); renderInvestTable(); pushToCloud();
 }
 function clearInvForm() {
   ['inv-name','inv-qty','inv-cost','inv-price','inv-note'].forEach(id=>document.getElementById(id).value='');
@@ -956,7 +1025,7 @@ function clearInvForm() {
 }
 function deleteInvest(id) {
   if (!confirm('ลบรายการนี้นะคะ?')) return;
-  DB.set(INVEST_KEY,DB.get(INVEST_KEY).filter(r=>r.id!==id)); renderInvestTable(); toast('🗑️ ลบรายการแล้ว');
+  DB.set(INVEST_KEY,DB.get(INVEST_KEY).filter(r=>r.id!==id)); renderInvestTable(); toast('🗑️ ลบรายการแล้ว'); pushToCloud();
 }
 function updateInvestPrice(id) {
   const r = DB.get(INVEST_KEY).find(x=>x.id===id);
@@ -1244,6 +1313,171 @@ function renderPieChart(month) {
                tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}
   });
 }
+
+// ── CLOUD SYNC (Firebase) ──
+let fbApp = null, fbDb = null, fbUnsub = null;
+let syncKey = localStorage.getItem('pf_sync_key') || '';
+let lastSyncTime = '';
+let isSyncing = false;
+
+function setSyncUI(state, detail='') {
+  const bar   = document.getElementById('sync-bar');
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const det   = document.getElementById('sync-detail');
+  const btnNow  = document.getElementById('btn-sync-now');
+  const btnDisc = document.getElementById('btn-disconnect');
+  dot.className = 'sync-status-dot';
+  label.className = 'sync-label';
+  bar.className = 'sync-bar';
+  if (state === 'connected') {
+    dot.classList.add('dot-synced'); label.classList.add('');
+    bar.classList.add('connected');
+    label.textContent = '☁️ เชื่อมต่อ Cloud แล้ว — ซิงค์อัตโนมัติ';
+    btnNow.style.display=''; btnDisc.style.display='';
+  } else if (state === 'syncing') {
+    dot.classList.add('dot-syncing');
+    bar.classList.add('connected');
+    label.textContent = '☁️ กำลังซิงค์...';
+    btnNow.style.display=''; btnDisc.style.display='';
+  } else if (state === 'error') {
+    dot.classList.add('dot-error'); label.classList.add('error');
+    bar.classList.add('error');
+    label.textContent = '❌ เชื่อมต่อไม่ได้';
+    btnNow.style.display=''; btnDisc.style.display='';
+  } else {
+    dot.classList.add('dot-off'); label.classList.add('off');
+    label.textContent = '☁️ ยังไม่ได้เชื่อมต่อ Cloud';
+    btnNow.style.display='none'; btnDisc.style.display='none';
+  }
+  det.textContent = detail;
+}
+
+function toggleSyncSetup() {
+  const el = document.getElementById('sync-setup');
+  el.classList.toggle('open');
+  // โหลดค่าที่เคยบันทึก
+  const saved = localStorage.getItem('pf_fb_config');
+  if (saved) document.getElementById('firebase-config-input').value = saved;
+  if (syncKey) document.getElementById('sync-key-input').value = syncKey;
+}
+
+function genKey() {
+  const words = ['rose','honey','star','moon','sugar','bunny','cloud','pink','sweet','lucky'];
+  const w1 = words[Math.floor(Math.random()*words.length)];
+  const w2 = words[Math.floor(Math.random()*words.length)];
+  const n  = Math.floor(Math.random()*900+100);
+  document.getElementById('sync-key-input').value = `${w1}-${w2}-${n}`;
+}
+
+async function connectSync() {
+  const configStr = document.getElementById('firebase-config-input').value.trim();
+  const key       = document.getElementById('sync-key-input').value.trim();
+  if (!configStr) { toast('❌ กรุณาวาง Firebase Config ก่อนค่ะ'); return; }
+  if (!key)       { toast('❌ กรุณากรอก Sync Key ก่ะ'); return; }
+  let config;
+  try {
+    // รองรับทั้ง JSON ล้วน และ const firebaseConfig = {...}
+    const match = configStr.match(/\{[\s\S]*\}/);
+    config = JSON.parse(match ? match[0] : configStr);
+  } catch(e) { toast('❌ Firebase Config ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้งค่ะ'); return; }
+
+  setSyncUI('syncing', 'กำลังเชื่อมต่อ...');
+  try {
+    if (fbApp) { try { fbApp.delete(); } catch(e) {} }
+    fbApp = firebase.initializeApp(config, 'pf-app-' + Date.now());
+    fbDb  = firebase.firestore(fbApp);
+    syncKey = key;
+    localStorage.setItem('pf_sync_key',  key);
+    localStorage.setItem('pf_fb_config', configStr);
+
+    // ดึงข้อมูลจาก Cloud ก่อน (ถ้ามี)
+    const snap = await fbDb.collection('pf').doc(key).get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.income)  DB.set(INCOME_KEY,  d.income);
+      if (d.expense) DB.set(EXPENSE_KEY, d.expense);
+      if (d.invest)  DB.set(INVEST_KEY,  d.invest);
+      lastSyncTime = d.lastSync || '';
+      renderDashboard();
+      toast('☁️ โหลดข้อมูลจาก Cloud สำเร็จค่ะ!');
+    } else {
+      // ไม่มีข้อมูลบน Cloud → push ข้อมูลปัจจุบันขึ้นไป
+      await pushToCloud();
+      toast('☁️ สร้างข้อมูลบน Cloud สำเร็จค่ะ!');
+    }
+
+    // ฟัง real-time changes
+    startListener();
+    setSyncUI('connected', `Key: ${key} | ซิงค์ล่าสุด: ${lastSyncTime ? new Date(lastSyncTime).toLocaleString('th-TH') : 'เมื่อกี้'}`);
+    document.getElementById('sync-setup').classList.remove('open');
+  } catch(e) {
+    setSyncUI('error', e.message);
+    toast('❌ เชื่อมต่อไม่ได้: ' + e.message);
+  }
+}
+
+function startListener() {
+  if (fbUnsub) fbUnsub();
+  fbUnsub = fbDb.collection('pf').doc(syncKey).onSnapshot(snap => {
+    if (!snap.exists || isSyncing) return;
+    const d = snap.data();
+    const cloudTime = d.lastSync || '';
+    if (cloudTime && cloudTime !== lastSyncTime) {
+      lastSyncTime = cloudTime;
+      DB.set(INCOME_KEY,  d.income  || []);
+      DB.set(EXPENSE_KEY, d.expense || []);
+      DB.set(INVEST_KEY,  d.invest  || []);
+      renderDashboard();
+      const t = new Date(cloudTime).toLocaleTimeString('th-TH');
+      setSyncUI('connected', `Key: ${syncKey} | อัปเดตจากเครื่องอื่น ${t}`);
+      toast('🔄 ซิงค์ข้อมูลจากเครื่องอื่นแล้วค่ะ');
+    }
+  }, err => setSyncUI('error', err.message));
+}
+
+async function pushToCloud() {
+  if (!fbDb || !syncKey) return;
+  isSyncing = true;
+  setSyncUI('syncing', 'กำลังบันทึก...');
+  try {
+    lastSyncTime = new Date().toISOString();
+    await fbDb.collection('pf').doc(syncKey).set({
+      income:   DB.get(INCOME_KEY),
+      expense:  DB.get(EXPENSE_KEY),
+      invest:   DB.get(INVEST_KEY),
+      lastSync: lastSyncTime,
+    });
+    setSyncUI('connected', `Key: ${syncKey} | ซิงค์ล่าสุด: ${new Date(lastSyncTime).toLocaleTimeString('th-TH')}`);
+  } catch(e) {
+    setSyncUI('error', e.message);
+  }
+  isSyncing = false;
+}
+
+async function syncNow() { await pushToCloud(); toast('✅ ซิงค์เสร็จแล้วค่ะ'); }
+
+function disconnectSync() {
+  if (!confirm('ยกเลิกการซิงค์ Cloud ?\n(ข้อมูลในเครื่องยังอยู่นะคะ)')) return;
+  if (fbUnsub) fbUnsub();
+  if (fbApp) { try { fbApp.delete(); } catch(e) {} }
+  fbApp = fbDb = fbUnsub = null; syncKey = '';
+  localStorage.removeItem('pf_sync_key');
+  localStorage.removeItem('pf_fb_config');
+  setSyncUI('off');
+  toast('ยกเลิกการซิงค์แล้วค่ะ');
+}
+
+// Auto-init ถ้าเคยตั้งค่าไว้
+(function autoInitSync() {
+  const saved = localStorage.getItem('pf_fb_config');
+  const key   = localStorage.getItem('pf_sync_key');
+  if (saved && key) {
+    document.getElementById('firebase-config-input').value = saved;
+    document.getElementById('sync-key-input').value = key;
+    connectSync();
+  }
+})();
 
 // ── EXPORT / IMPORT ──
 function exportData() {
